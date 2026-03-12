@@ -1,7 +1,5 @@
-```
-venv/
-venv311/
-__pycache__/
-*.pyc
-*.task
-test_squat.mp4
+git rm -r --cached venv311/
+git rm -r --cached venv/
+git add .
+git commit -m "remove venv folders from git tracking"
+git push
