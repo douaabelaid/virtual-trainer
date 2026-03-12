@@ -38,8 +38,9 @@ def get_landmarks_json(landmarks, timestamp_ms):
     }
 
 def run():
-    cap = cv2.VideoCapture(0)  # 0 = webcam
-
+    cap = cv2.VideoCapture(0)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
     with mp_pose.Pose(
         min_detection_confidence=0.5,
         min_tracking_confidence=0.5

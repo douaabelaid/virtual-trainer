@@ -4,6 +4,7 @@ import time
 import cv2
 import mediapipe as mp
 from fastapi import FastAPI, WebSocket
+from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 # Initialize MediaPipe Pose
@@ -12,10 +13,17 @@ mp_drawing = mp.solutions.drawing_utils
 
 app = FastAPI()
 
+# Allow external connections
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 def get_landmarks_json(landmarks, timestamp_ms):
     """Convert MediaPipe landmarks to Douaa's expected format"""
-    
-    # Mapping of landmark names to their index in MediaPipe
     relevant_landmarks = {
         "left_knee": mp_pose.PoseLandmark.LEFT_KNEE,
         "right_knee": mp_pose.PoseLandmark.RIGHT_KNEE,
