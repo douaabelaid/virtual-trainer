@@ -13,15 +13,32 @@ mp_drawing = mp.solutions.drawing_utils
 app = FastAPI()
 
 def get_landmarks_json(landmarks, timestamp_ms):
-    """Convert MediaPipe landmarks to JSON format"""
+    """Convert MediaPipe landmarks to Douaa's expected format"""
+    
+    # Mapping of landmark names to their index in MediaPipe
+    relevant_landmarks = {
+        "left_knee": mp_pose.PoseLandmark.LEFT_KNEE,
+        "right_knee": mp_pose.PoseLandmark.RIGHT_KNEE,
+        "left_hip": mp_pose.PoseLandmark.LEFT_HIP,
+        "right_hip": mp_pose.PoseLandmark.RIGHT_HIP,
+        "left_ankle": mp_pose.PoseLandmark.LEFT_ANKLE,
+        "right_ankle": mp_pose.PoseLandmark.RIGHT_ANKLE,
+        "left_shoulder": mp_pose.PoseLandmark.LEFT_SHOULDER,
+        "right_shoulder": mp_pose.PoseLandmark.RIGHT_SHOULDER,
+        "left_elbow": mp_pose.PoseLandmark.LEFT_ELBOW,
+        "right_elbow": mp_pose.PoseLandmark.RIGHT_ELBOW,
+        "left_wrist": mp_pose.PoseLandmark.LEFT_WRIST,
+        "right_wrist": mp_pose.PoseLandmark.RIGHT_WRIST,
+    }
+
     landmark_data = {}
-    for idx, landmark in enumerate(landmarks.landmark):
-        landmark_data[mp_pose.PoseLandmark(idx).name] = {
-            "x": round(landmark.x, 4),
-            "y": round(landmark.y, 4),
-            "z": round(landmark.z, 4),
-            "visibility": round(landmark.visibility, 4)
+    for name, idx in relevant_landmarks.items():
+        lm = landmarks.landmark[idx]
+        landmark_data[name] = {
+            "x": round(lm.x, 4),
+            "y": round(lm.y, 4)
         }
+
     return {
         "timestamp_ms": timestamp_ms,
         "landmarks": landmark_data
