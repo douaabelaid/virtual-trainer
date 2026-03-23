@@ -32,11 +32,13 @@ class ExerciseDetector:
         self.exercise = ExerciseType(exercise)
         self.stage = ExerciseStage.STANDING
         self.rep_count = 0
+        self._was_down = False   # tracks that we reached DOWN in the current rep
 
     def reset(self):
         """Reset rep count and stage (e.g., when switching exercises or starting a new set)."""
         self.stage = ExerciseStage.STANDING
         self.rep_count = 0
+        self._was_down = False
 
     def detect_stage(self, angles: dict) -> ExerciseStage:
         thresholds = THRESHOLDS[self.exercise.value]
@@ -44,7 +46,13 @@ class ExerciseDetector:
         if self.exercise in (ExerciseType.SQUAT, ExerciseType.LUNGE):
             left_knee = angles.get("left_knee", 180)
             right_knee = angles.get("right_knee", 180)
-            avg_knee = (left_knee + right_knee) / 2
+
+            if self.exercise == ExerciseType.SQUAT:
+                # Both legs bend equally — use the average
+                avg_knee = (left_knee + right_knee) / 2
+            else:
+                # Lunge — only the front (most bent) leg matters
+                avg_knee = min(left_knee, right_knee)
 
             if avg_knee < thresholds["down"]["left_knee"]:
                 return ExerciseStage.DOWN
@@ -74,9 +82,13 @@ class ExerciseDetector:
         # Step 2 — detect current stage
         new_stage = self.detect_stage(angles)
 
-        # Step 3 — count rep (down → standing transition = 1 rep)
-        if self.stage == ExerciseStage.DOWN and new_stage == ExerciseStage.STANDING:
+        # Step 3 — count rep: any DOWN stage followed by STANDING = 1 rep
+        # Uses _was_down so DOWN → TRANSITION → STANDING also counts.
+        if new_stage == ExerciseStage.DOWN:
+            self._was_down = True
+        if self._was_down and new_stage == ExerciseStage.STANDING:
             self.rep_count += 1
+            self._was_down = False
 
         self.stage = new_stage
 
