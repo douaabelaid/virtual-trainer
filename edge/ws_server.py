@@ -103,7 +103,7 @@ class BiomechanicsAnalyzer:
         if landmark_id >= len(landmarks):
             return (0.0, 0.0)
         lm = landmarks[landmark_id]
-        return (lm['x'], lm['y'])
+        return (lm.get('x', 0.0), lm.get('y', 0.0))  # safe .get instead of direct key access
 
     def _is_visible(
         self,
@@ -149,13 +149,11 @@ class BiomechanicsAnalyzer:
         # Phase et reps
         phase = self._determine_squat_phase(avg_knee, avg_hip)
 
-        if (self.previous_phase == MovementPhase.BOTTOM and
-                phase == MovementPhase.ASCENDING):
-            self.rep_count += 1
-            print(f"🔢 Répétition {self.rep_count} comptée !")
-
-        self.previous_phase = phase
-        self.current_phase  = phase
+        self._update_phase_and_count(
+            new_phase=phase,
+            rep_trigger_phase=MovementPhase.BOTTOM,
+            rep_name="Répétition"
+        )
 
         errors = self._detect_squat_errors(
             l_knee_angle, r_knee_angle,
@@ -269,13 +267,11 @@ class BiomechanicsAnalyzer:
         else:
             phase = MovementPhase.ASCENDING
 
-        if (self.previous_phase == MovementPhase.BOTTOM and
-                phase == MovementPhase.ASCENDING):
-            self.rep_count += 1
-            print(f"🔢 Pompe {self.rep_count} comptée !")
-
-        self.previous_phase = phase
-        self.current_phase  = phase
+        self._update_phase_and_count(
+            new_phase=phase,
+            rep_trigger_phase=MovementPhase.BOTTOM,
+            rep_name="Pompe"
+        )
 
         errors = []
         if abs(l_elbow_angle - r_elbow_angle) > 20:
@@ -325,3 +321,16 @@ class BiomechanicsAnalyzer:
         for key in self.angle_history:
             self.angle_history[key] = []
         logger.info("🔄 Compteur réinitialisé")
+
+    def _update_phase_and_count(
+        self,
+        new_phase: MovementPhase,
+        rep_trigger_phase: MovementPhase,
+        rep_name: str = "Répétition"
+    ) -> None:
+        """Update phase and increment rep count on BOTTOM → ASCENDING transition."""
+        if self.previous_phase == rep_trigger_phase and new_phase == MovementPhase.ASCENDING:
+            self.rep_count += 1
+            logging.info(f"🔢 {rep_name} {self.rep_count} comptée !")
+        self.previous_phase = new_phase
+        self.current_phase  = new_phase
