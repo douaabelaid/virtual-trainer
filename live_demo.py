@@ -5,17 +5,20 @@ Opens the webcam, runs MediaPipe PoseLandmarker (v0.10+ tasks API),
 feeds landmarks into ExerciseDetector, and overlays real-time feedback.
 
 Usage:
-    python3 live_demo.py                        # squat, camera 0
+    python3 live_demo.py                          # squat, camera 0
     python3 live_demo.py --exercise pushup
-    python3 live_demo.py --exercise lunge
-    python3 live_demo.py --simulate             # no camera needed
-    python3 live_demo.py --simulate --exercise pushup
+    python3 live_demo.py --simulate               # no camera, WITH window
+    python3 live_demo.py --simulate --headless     # no camera, NO window (cloud/CI)
+    python3 live_demo.py --simulate --headless --reps 10
     python3 live_demo.py --camera 1
 
-Controls (window must be focused):
+Headless controls (keyboard not available — use Ctrl+C to stop):
+    Ctrl+C — quit
+
+Window controls:
     Q  — quit
     R  — reset rep counter
-    S/P/L — switch to Squat / Pushup / Lunge on the fly
+    S/P/L — switch to Squat / Pushup / Lunge
 """
 
 import sys
@@ -193,6 +196,83 @@ def draw_hud(frame, exercise, stage, reps, coaching, fps, person_detected, simul
 
 # ── Simulation mode ───────────────────────────────────────────────────────────
 
+def run_headless(exercise: str, target_reps: int = 0):
+    """
+    Pure console mode — no cv2 window, works in headless/cloud environments.
+    Simulates smooth reps and prints a live table to stdout.
+    Stops after *target_reps* completed reps, or runs until Ctrl+C.
+    """
+    detector   = ExerciseDetector(exercise=exercise)
+    start_time = time.time()
+    prev_time  = start_time
+    last_reps  = 0
+
+    bar_width = 20  # width of the ASCII angle bar
+
+    print(f"\nVirtual Trainer — {exercise.upper()} [HEADLESS]")
+    print(f"{'─'*70}")
+    print(f"{'STAGE':<14} {'REPS':>5}  {'KEY ANGLE':>12}  COACHING")
+    print(f"{'─'*70}")
+
+    try:
+        frame = 0
+        while True:
+            now       = time.time()
+            elapsed   = now - start_time
+            fps       = 1.0 / max(now - prev_time, 1e-6)
+            prev_time = now
+            frame    += 1
+
+            lm_dict = _simulate_landmarks(exercise, elapsed)
+            state   = detector.update(lm_dict)
+
+            # Pick the most relevant angle for display
+            from logic.angle_utils import get_joint_angles
+            angles = get_joint_angles(lm_dict)
+            if exercise == "pushup":
+                key_angle = angles.get("left_elbow", 0)
+                angle_lbl = "elbow"
+            else:
+                key_angle = angles.get("left_knee", 0)
+                angle_lbl = "knee"
+
+            coaching = map_flags_to_coaching(state.feedback_flags)
+            coaching_txt = coaching[0]["message"] if coaching else "—"
+
+            # ASCII angle bar
+            pct = max(0.0, min(1.0, (key_angle - 60) / 120))  # 60°–180°
+            filled = int(pct * bar_width)
+            bar = "█" * filled + "░" * (bar_width - filled)
+
+            stage_col = {"standing": "\033[92m", "down": "\033[94m",
+                         "transition": "\033[96m"}.get(state.stage.value, "")
+            reset_col = "\033[0m"
+
+            print(
+                f"\r{stage_col}{state.stage.value.upper():<14}{reset_col}"
+                f" {state.rep_count:>5}  "
+                f"{angle_lbl}={key_angle:>5.1f}°  "
+                f"|{bar}|  "
+                f"{coaching_txt:<45}",
+                end="", flush=True
+            )
+
+            # Rep milestone
+            if state.rep_count > last_reps:
+                last_reps = state.rep_count
+                print(f"\n  ✓ Rep {last_reps} completed!")
+                if target_reps and last_reps >= target_reps:
+                    break
+
+            time.sleep(1 / 30)  # ~30 fps simulation
+
+    except KeyboardInterrupt:
+        pass
+
+    print(f"\n{'─'*70}")
+    print(f"Session ended — {detector.rep_count} reps  |  exercise: {exercise.upper()}\n")
+
+
 def run_simulate(exercise):
     detector         = ExerciseDetector(exercise=exercise)
     current_exercise = exercise
@@ -347,9 +427,36 @@ if __name__ == "__main__":
     parser.add_argument("--camera", type=int, default=0)
     parser.add_argument("--simulate", action="store_true",
                         help="Run with synthetic landmarks — no camera needed")
+    parser.add_argument("--headless", action="store_true",
+                        help="Console-only output, no window (for cloud/CI)")
+    parser.add_argument("--reps", type=int, default=0,
+                        help="Stop after N reps (headless only, 0=infinite)")
     args = parser.parse_args()
 
-    if args.simulate:
+    if args.headless or args.simulate and not _has_display():
+        run_headless(args.exercise, args.reps)
+    elif args.simulate:
         run_simulate(args.exercise)
     else:
         run_camera(args.exercise, args.camera)
+
+
+def _has_display() -> bool:
+    """Return True if a graphical display is available."""
+    if sys.platform == "win32":
+        return True
+    display = os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")
+    if not display:
+        return False
+    # Try to load a hidden window to see if Qt/X11 actually works
+    try:
+        import subprocess
+        result = subprocess.run(
+            ["python3", "-c",
+             "import cv2, numpy as np; "
+             "cv2.namedWindow('t', cv2.WINDOW_NORMAL); cv2.destroyAllWindows()"],
+            capture_output=True, timeout=3
+        )
+        return result.returncode == 0
+    except Exception:
+        return False
