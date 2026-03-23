@@ -1,0 +1,2132 @@
+{
+  "resolution": "640\u00d7480",
+  "frames_measured": 300,
+  "frames_detected": 0,
+  "detection_rate_pct": 0.0,
+  "fps": {
+    "mean": 60.89,
+    "min": 18.66,
+    "max": 73.25,
+    "std": 10.39,
+    "p95": 70.89
+  },
+  "latency_ms": {
+    "mean": 17.13,
+    "min": 13.65,
+    "max": 53.59,
+    "p50": 15.27,
+    "p95": 24.8,
+    "p99": 33.58
+  },
+  "cpu_pct": {
+    "mean": 69.9,
+    "peak": 100.0
+  },
+  "ram_mb": {
+    "baseline": 108.3,
+    "mean": 201.0,
+    "peak": 201.1
+  },
+  "frame_records": [
+    {
+      "frame": 1,
+      "latency_ms": 17.103,
+      "cpu_pct": 76.2,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 2,
+      "latency_ms": 22.116,
+      "cpu_pct": 100.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 3,
+      "latency_ms": 15.182,
+      "cpu_pct": 33.3,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 4,
+      "latency_ms": 15.222,
+      "cpu_pct": 66.7,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 5,
+      "latency_ms": 20.89,
+      "cpu_pct": 100.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 6,
+      "latency_ms": 21.836,
+      "cpu_pct": 100.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 7,
+      "latency_ms": 30.519,
+      "cpu_pct": 100.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 8,
+      "latency_ms": 28.237,
+      "cpu_pct": 100.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 9,
+      "latency_ms": 20.783,
+      "cpu_pct": 100.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 10,
+      "latency_ms": 22.921,
+      "cpu_pct": 80.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 11,
+      "latency_ms": 33.063,
+      "cpu_pct": 100.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 12,
+      "latency_ms": 19.462,
+      "cpu_pct": 100.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 13,
+      "latency_ms": 20.458,
+      "cpu_pct": 100.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 14,
+      "latency_ms": 22.943,
+      "cpu_pct": 100.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 15,
+      "latency_ms": 21.147,
+      "cpu_pct": 100.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 16,
+      "latency_ms": 14.5,
+      "cpu_pct": 33.3,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 17,
+      "latency_ms": 14.124,
+      "cpu_pct": 66.7,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 18,
+      "latency_ms": 14.217,
+      "cpu_pct": 50.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 19,
+      "latency_ms": 13.953,
+      "cpu_pct": 50.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 20,
+      "latency_ms": 14.291,
+      "cpu_pct": 50.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 21,
+      "latency_ms": 18.886,
+      "cpu_pct": 100.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 22,
+      "latency_ms": 16.901,
+      "cpu_pct": 75.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 23,
+      "latency_ms": 14.48,
+      "cpu_pct": 33.3,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 24,
+      "latency_ms": 14.347,
+      "cpu_pct": 66.7,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 25,
+      "latency_ms": 14.72,
+      "cpu_pct": 33.3,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 26,
+      "latency_ms": 15.261,
+      "cpu_pct": 66.7,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 27,
+      "latency_ms": 17.668,
+      "cpu_pct": 75.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 28,
+      "latency_ms": 18.122,
+      "cpu_pct": 100.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 29,
+      "latency_ms": 14.08,
+      "cpu_pct": 33.3,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 30,
+      "latency_ms": 14.336,
+      "cpu_pct": 66.7,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 31,
+      "latency_ms": 14.56,
+      "cpu_pct": 50.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 32,
+      "latency_ms": 15.163,
+      "cpu_pct": 50.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 33,
+      "latency_ms": 25.353,
+      "cpu_pct": 100.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 34,
+      "latency_ms": 33.582,
+      "cpu_pct": 100.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 35,
+      "latency_ms": 16.22,
+      "cpu_pct": 66.7,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 36,
+      "latency_ms": 14.502,
+      "cpu_pct": 33.3,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 37,
+      "latency_ms": 14.304,
+      "cpu_pct": 66.7,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 38,
+      "latency_ms": 17.679,
+      "cpu_pct": 100.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 39,
+      "latency_ms": 16.267,
+      "cpu_pct": 66.7,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 40,
+      "latency_ms": 14.436,
+      "cpu_pct": 50.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 41,
+      "latency_ms": 15.83,
+      "cpu_pct": 50.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 42,
+      "latency_ms": 14.492,
+      "cpu_pct": 66.7,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 43,
+      "latency_ms": 14.521,
+      "cpu_pct": 33.3,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 44,
+      "latency_ms": 16.842,
+      "cpu_pct": 75.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 45,
+      "latency_ms": 19.947,
+      "cpu_pct": 100.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 46,
+      "latency_ms": 15.617,
+      "cpu_pct": 66.7,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 47,
+      "latency_ms": 14.654,
+      "cpu_pct": 50.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 48,
+      "latency_ms": 14.473,
+      "cpu_pct": 66.7,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 49,
+      "latency_ms": 14.905,
+      "cpu_pct": 50.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 50,
+      "latency_ms": 16.009,
+      "cpu_pct": 75.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 51,
+      "latency_ms": 27.307,
+      "cpu_pct": 100.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 52,
+      "latency_ms": 33.79,
+      "cpu_pct": 100.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 53,
+      "latency_ms": 27.785,
+      "cpu_pct": 100.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 54,
+      "latency_ms": 24.773,
+      "cpu_pct": 100.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 55,
+      "latency_ms": 27.348,
+      "cpu_pct": 100.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 56,
+      "latency_ms": 14.202,
+      "cpu_pct": 33.3,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 57,
+      "latency_ms": 17.152,
+      "cpu_pct": 75.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 58,
+      "latency_ms": 14.08,
+      "cpu_pct": 66.7,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 59,
+      "latency_ms": 17.646,
+      "cpu_pct": 80.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 60,
+      "latency_ms": 15.939,
+      "cpu_pct": 100.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 61,
+      "latency_ms": 14.772,
+      "cpu_pct": 50.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 62,
+      "latency_ms": 14.274,
+      "cpu_pct": 50.0,
+      "ram_mb": 200.9,
+      "detected": false
+    },
+    {
+      "frame": 63,
+      "latency_ms": 14.223,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 64,
+      "latency_ms": 14.749,
+      "cpu_pct": 33.3,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 65,
+      "latency_ms": 15.52,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 66,
+      "latency_ms": 18.481,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 67,
+      "latency_ms": 14.216,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 68,
+      "latency_ms": 13.797,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 69,
+      "latency_ms": 13.702,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 70,
+      "latency_ms": 13.653,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 71,
+      "latency_ms": 14.261,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 72,
+      "latency_ms": 17.873,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 73,
+      "latency_ms": 16.598,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 74,
+      "latency_ms": 14.114,
+      "cpu_pct": 60.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 75,
+      "latency_ms": 14.178,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 76,
+      "latency_ms": 14.062,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 77,
+      "latency_ms": 14.001,
+      "cpu_pct": 33.3,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 78,
+      "latency_ms": 15.917,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 79,
+      "latency_ms": 20.505,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 80,
+      "latency_ms": 15.704,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 81,
+      "latency_ms": 14.61,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 82,
+      "latency_ms": 14.854,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 83,
+      "latency_ms": 14.453,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 84,
+      "latency_ms": 14.643,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 85,
+      "latency_ms": 18.989,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 86,
+      "latency_ms": 14.714,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 87,
+      "latency_ms": 14.393,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 88,
+      "latency_ms": 14.32,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 89,
+      "latency_ms": 14.566,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 90,
+      "latency_ms": 14.36,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 91,
+      "latency_ms": 19.053,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 92,
+      "latency_ms": 16.259,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 93,
+      "latency_ms": 17.387,
+      "cpu_pct": 75.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 94,
+      "latency_ms": 19.349,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 95,
+      "latency_ms": 14.859,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 96,
+      "latency_ms": 14.699,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 97,
+      "latency_ms": 20.012,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 98,
+      "latency_ms": 15.016,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 99,
+      "latency_ms": 14.528,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 100,
+      "latency_ms": 14.676,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 101,
+      "latency_ms": 16.761,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 102,
+      "latency_ms": 14.806,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 103,
+      "latency_ms": 18.813,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 104,
+      "latency_ms": 16.021,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 105,
+      "latency_ms": 17.907,
+      "cpu_pct": 80.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 106,
+      "latency_ms": 14.728,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 107,
+      "latency_ms": 16.572,
+      "cpu_pct": 75.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 108,
+      "latency_ms": 14.921,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 109,
+      "latency_ms": 23.687,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 110,
+      "latency_ms": 28.697,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 111,
+      "latency_ms": 19.959,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 112,
+      "latency_ms": 16.65,
+      "cpu_pct": 75.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 113,
+      "latency_ms": 16.761,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 114,
+      "latency_ms": 20.655,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 115,
+      "latency_ms": 19.614,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 116,
+      "latency_ms": 18.779,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 117,
+      "latency_ms": 19.656,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 118,
+      "latency_ms": 19.529,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 119,
+      "latency_ms": 19.378,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 120,
+      "latency_ms": 17.357,
+      "cpu_pct": 80.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 121,
+      "latency_ms": 13.96,
+      "cpu_pct": 33.3,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 122,
+      "latency_ms": 14.525,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 123,
+      "latency_ms": 14.621,
+      "cpu_pct": 33.3,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 124,
+      "latency_ms": 16.201,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 125,
+      "latency_ms": 18.216,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 126,
+      "latency_ms": 14.502,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 127,
+      "latency_ms": 14.231,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 128,
+      "latency_ms": 14.665,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 129,
+      "latency_ms": 14.307,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 130,
+      "latency_ms": 14.656,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 131,
+      "latency_ms": 18.996,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 132,
+      "latency_ms": 14.601,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 133,
+      "latency_ms": 14.115,
+      "cpu_pct": 33.3,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 134,
+      "latency_ms": 14.256,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 135,
+      "latency_ms": 14.004,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 136,
+      "latency_ms": 14.27,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 137,
+      "latency_ms": 16.979,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 138,
+      "latency_ms": 20.041,
+      "cpu_pct": 80.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 139,
+      "latency_ms": 14.491,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 140,
+      "latency_ms": 14.536,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 141,
+      "latency_ms": 15.002,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 142,
+      "latency_ms": 14.669,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 143,
+      "latency_ms": 15.925,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 144,
+      "latency_ms": 18.643,
+      "cpu_pct": 75.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 145,
+      "latency_ms": 14.636,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 146,
+      "latency_ms": 14.328,
+      "cpu_pct": 33.3,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 147,
+      "latency_ms": 14.577,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 148,
+      "latency_ms": 14.627,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 149,
+      "latency_ms": 14.401,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 150,
+      "latency_ms": 21.213,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 151,
+      "latency_ms": 16.588,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 152,
+      "latency_ms": 14.3,
+      "cpu_pct": 33.3,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 153,
+      "latency_ms": 14.09,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 154,
+      "latency_ms": 14.241,
+      "cpu_pct": 33.3,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 155,
+      "latency_ms": 14.447,
+      "cpu_pct": 75.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 156,
+      "latency_ms": 17.801,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 157,
+      "latency_ms": 18.09,
+      "cpu_pct": 80.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 158,
+      "latency_ms": 13.944,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 159,
+      "latency_ms": 14.58,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 160,
+      "latency_ms": 15.507,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 161,
+      "latency_ms": 19.038,
+      "cpu_pct": 80.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 162,
+      "latency_ms": 30.279,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 163,
+      "latency_ms": 21.257,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 164,
+      "latency_ms": 28.931,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 165,
+      "latency_ms": 15.598,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 166,
+      "latency_ms": 18.144,
+      "cpu_pct": 80.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 167,
+      "latency_ms": 17.743,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 168,
+      "latency_ms": 14.328,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.0,
+      "detected": false
+    },
+    {
+      "frame": 169,
+      "latency_ms": 14.523,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 170,
+      "latency_ms": 15.794,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 171,
+      "latency_ms": 15.382,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 172,
+      "latency_ms": 16.855,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 173,
+      "latency_ms": 17.9,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 174,
+      "latency_ms": 14.633,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 175,
+      "latency_ms": 18.633,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 176,
+      "latency_ms": 53.589,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 177,
+      "latency_ms": 32.215,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 178,
+      "latency_ms": 19.163,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 179,
+      "latency_ms": 20.262,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 180,
+      "latency_ms": 15.875,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 181,
+      "latency_ms": 18.161,
+      "cpu_pct": 80.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 182,
+      "latency_ms": 14.401,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 183,
+      "latency_ms": 14.015,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 184,
+      "latency_ms": 18.612,
+      "cpu_pct": 75.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 185,
+      "latency_ms": 23.029,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 186,
+      "latency_ms": 19.4,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 187,
+      "latency_ms": 19.289,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 188,
+      "latency_ms": 20.254,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 189,
+      "latency_ms": 22.639,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 190,
+      "latency_ms": 23.507,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 191,
+      "latency_ms": 21.076,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 192,
+      "latency_ms": 18.934,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 193,
+      "latency_ms": 19.881,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 194,
+      "latency_ms": 19.526,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 195,
+      "latency_ms": 21.085,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 196,
+      "latency_ms": 20.801,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 197,
+      "latency_ms": 14.952,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 198,
+      "latency_ms": 15.489,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 199,
+      "latency_ms": 15.116,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 200,
+      "latency_ms": 15.276,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 201,
+      "latency_ms": 17.942,
+      "cpu_pct": 75.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 202,
+      "latency_ms": 18.834,
+      "cpu_pct": 75.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 203,
+      "latency_ms": 14.875,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 204,
+      "latency_ms": 14.48,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 205,
+      "latency_ms": 15.129,
+      "cpu_pct": 33.3,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 206,
+      "latency_ms": 14.804,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 207,
+      "latency_ms": 17.317,
+      "cpu_pct": 75.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 208,
+      "latency_ms": 19.125,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 209,
+      "latency_ms": 14.661,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 210,
+      "latency_ms": 16.09,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 211,
+      "latency_ms": 14.766,
+      "cpu_pct": 33.3,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 212,
+      "latency_ms": 15.005,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 213,
+      "latency_ms": 14.888,
+      "cpu_pct": 33.3,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 214,
+      "latency_ms": 19.993,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 215,
+      "latency_ms": 14.813,
+      "cpu_pct": 75.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 216,
+      "latency_ms": 14.54,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 217,
+      "latency_ms": 14.558,
+      "cpu_pct": 33.3,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 218,
+      "latency_ms": 17.528,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 219,
+      "latency_ms": 15.418,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 220,
+      "latency_ms": 20.606,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 221,
+      "latency_ms": 15.869,
+      "cpu_pct": 60.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 222,
+      "latency_ms": 14.643,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 223,
+      "latency_ms": 14.889,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 224,
+      "latency_ms": 14.529,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 225,
+      "latency_ms": 14.706,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 226,
+      "latency_ms": 20.716,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 227,
+      "latency_ms": 14.432,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 228,
+      "latency_ms": 14.442,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 229,
+      "latency_ms": 14.183,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 230,
+      "latency_ms": 14.566,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 231,
+      "latency_ms": 14.425,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 232,
+      "latency_ms": 17.194,
+      "cpu_pct": 75.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 233,
+      "latency_ms": 17.808,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 234,
+      "latency_ms": 14.743,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 235,
+      "latency_ms": 14.152,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 236,
+      "latency_ms": 14.29,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 237,
+      "latency_ms": 14.496,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 238,
+      "latency_ms": 15.932,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 239,
+      "latency_ms": 18.82,
+      "cpu_pct": 75.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 240,
+      "latency_ms": 14.291,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 241,
+      "latency_ms": 14.107,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 242,
+      "latency_ms": 13.948,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 243,
+      "latency_ms": 14.249,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 244,
+      "latency_ms": 14.46,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 245,
+      "latency_ms": 17.764,
+      "cpu_pct": 80.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 246,
+      "latency_ms": 17.122,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 247,
+      "latency_ms": 14.081,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 248,
+      "latency_ms": 14.147,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 249,
+      "latency_ms": 14.472,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 250,
+      "latency_ms": 14.752,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 251,
+      "latency_ms": 20.265,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 252,
+      "latency_ms": 17.735,
+      "cpu_pct": 80.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 253,
+      "latency_ms": 14.682,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 254,
+      "latency_ms": 14.213,
+      "cpu_pct": 33.3,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 255,
+      "latency_ms": 14.211,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 256,
+      "latency_ms": 14.119,
+      "cpu_pct": 33.3,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 257,
+      "latency_ms": 17.224,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 258,
+      "latency_ms": 18.779,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 259,
+      "latency_ms": 14.793,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 260,
+      "latency_ms": 15.992,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 261,
+      "latency_ms": 14.5,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 262,
+      "latency_ms": 15.214,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 263,
+      "latency_ms": 15.178,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 264,
+      "latency_ms": 19.414,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 265,
+      "latency_ms": 14.862,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 266,
+      "latency_ms": 14.369,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 267,
+      "latency_ms": 14.485,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 268,
+      "latency_ms": 14.851,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 269,
+      "latency_ms": 14.446,
+      "cpu_pct": 33.3,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 270,
+      "latency_ms": 18.399,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 271,
+      "latency_ms": 16.224,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 272,
+      "latency_ms": 14.411,
+      "cpu_pct": 33.3,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 273,
+      "latency_ms": 14.526,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 274,
+      "latency_ms": 14.704,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 275,
+      "latency_ms": 14.635,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 276,
+      "latency_ms": 21.368,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 277,
+      "latency_ms": 20.412,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 278,
+      "latency_ms": 17.462,
+      "cpu_pct": 75.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 279,
+      "latency_ms": 16.494,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 280,
+      "latency_ms": 15.893,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 281,
+      "latency_ms": 18.935,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 282,
+      "latency_ms": 19.845,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 283,
+      "latency_ms": 16.443,
+      "cpu_pct": 60.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 284,
+      "latency_ms": 14.355,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 285,
+      "latency_ms": 16.162,
+      "cpu_pct": 75.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 286,
+      "latency_ms": 14.844,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 287,
+      "latency_ms": 16.441,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 288,
+      "latency_ms": 18.593,
+      "cpu_pct": 80.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 289,
+      "latency_ms": 14.274,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 290,
+      "latency_ms": 14.659,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 291,
+      "latency_ms": 14.319,
+      "cpu_pct": 33.3,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 292,
+      "latency_ms": 14.747,
+      "cpu_pct": 66.7,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 293,
+      "latency_ms": 14.709,
+      "cpu_pct": 33.3,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 294,
+      "latency_ms": 19.518,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 295,
+      "latency_ms": 15.578,
+      "cpu_pct": 75.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 296,
+      "latency_ms": 14.541,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 297,
+      "latency_ms": 14.601,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 298,
+      "latency_ms": 14.496,
+      "cpu_pct": 50.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 299,
+      "latency_ms": 17.08,
+      "cpu_pct": 75.0,
+      "ram_mb": 201.1,
+      "detected": false
+    },
+    {
+      "frame": 300,
+      "latency_ms": 40.416,
+      "cpu_pct": 100.0,
+      "ram_mb": 201.1,
+      "detected": false
+    }
+  ]
+}

@@ -1,131 +1,262 @@
+"""
+pose_detector.py
+Decodes JPEG frames, runs MediaPipe Pose, returns landmarks + joint angles.
+"""
+
+import logging
+import time
+from dataclasses import dataclass, field
+from typing import Optional
+
 import cv2
 import mediapipe as mp
-import json
-import time
+import numpy as np
 
-# ---------------------------------------------------------------------------
-# Jetson Nano optimisation settings
-# ---------------------------------------------------------------------------
-CAPTURE_WIDTH  = 640   # capture at 640x480 — enough for accurate detection
-CAPTURE_HEIGHT = 480
-INFER_WIDTH    = 320   # downscale before MediaPipe to cut inference cost
-INFER_HEIGHT   = 240
-TARGET_FPS     = 15    # hard cap: skip frames when camera runs faster
-DISPLAY_EVERY  = 1     # show every N-th processed frame (raise to 2 to save GPU time)
-# ---------------------------------------------------------------------------
+logger = logging.getLogger("pose_detector")
 
-mp_pose    = mp.solutions.pose
-mp_drawing = mp.solutions.drawing_utils
+# ── 33 MediaPipe landmark names ───────────────────────────────────────────────
+LANDMARK_NAMES = [
+    "nose",
+    "left_eye_inner",   "left_eye",    "left_eye_outer",
+    "right_eye_inner",  "right_eye",   "right_eye_outer",
+    "left_ear",         "right_ear",
+    "mouth_left",       "mouth_right",
+    "left_shoulder",    "right_shoulder",
+    "left_elbow",       "right_elbow",
+    "left_wrist",       "right_wrist",
+    "left_pinky",       "right_pinky",
+    "left_index",       "right_index",
+    "left_thumb",       "right_thumb",
+    "left_hip",         "right_hip",
+    "left_knee",        "right_knee",
+    "left_ankle",       "right_ankle",
+    "left_heel",        "right_heel",
+    "left_foot_index",  "right_foot_index",
+]
 
-# Build landmark-name lookup once at import time to avoid per-frame enum calls
-_LANDMARK_NAMES = [lm.name for lm in mp_pose.PoseLandmark]
+# ── Joint angle triplets (vertex is the middle landmark) ─────────────────────
+ANGLE_TRIPLETS: dict[str, tuple[str, str, str]] = {
+    "left_knee":      ("left_hip",       "left_knee",      "left_ankle"),
+    "right_knee":     ("right_hip",      "right_knee",     "right_ankle"),
+    "left_hip":       ("left_shoulder",  "left_hip",       "left_knee"),
+    "right_hip":      ("right_shoulder", "right_hip",      "right_knee"),
+    "left_elbow":     ("left_shoulder",  "left_elbow",     "left_wrist"),
+    "right_elbow":    ("right_shoulder", "right_elbow",    "right_wrist"),
+    "left_shoulder":  ("left_elbow",     "left_shoulder",  "left_hip"),
+    "right_shoulder": ("right_elbow",    "right_shoulder", "right_hip"),
+}
 
-# Slim drawing spec — thinner lines render faster on a small GPU
-_LANDMARK_STYLE    = mp_drawing.DrawingSpec(color=(0, 255, 0), thickness=1, circle_radius=2)
-_CONNECTION_STYLE  = mp_drawing.DrawingSpec(color=(0, 200, 255), thickness=1)
+TARGET_FPS     = 15
+FRAME_INTERVAL = 1.0 / TARGET_FPS   # 66.7 ms
 
 
-def get_landmarks_json(landmarks, timestamp_ms):
-    """Return a dict with timestamp and all 33 landmark coordinates."""
-    return {
-        "timestamp_ms": timestamp_ms,
-        "landmarks": {
-            _LANDMARK_NAMES[idx]: {
-                "x":          round(lm.x,          4),
-                "y":          round(lm.y,          4),
-                "z":          round(lm.z,          4),
-                "visibility": round(lm.visibility, 4),
+# ── Result dataclass ──────────────────────────────────────────────────────────
+
+@dataclass
+class PoseResult:
+    detected:   bool
+    landmarks:  list                  # 33 dicts or []
+    angles:     dict                  # joint_name → float degrees
+    fps:        float
+    latency_ms: float
+    frame_idx:  int
+    error:      Optional[str] = None
+
+
+# ── Detector ──────────────────────────────────────────────────────────────────
+
+class PoseDetector:
+    """
+    Wraps MediaPipe Pose for a single client session.
+
+    detector = PoseDetector()
+    result   = detector.detect(jpeg_bytes)
+    detector.close()
+    """
+
+    def __init__(
+        self,
+        model_complexity:   int   = 1,
+        min_detection_conf: float = 0.5,
+        min_tracking_conf:  float = 0.5,
+        target_fps:         int   = TARGET_FPS,
+        min_visibility:     float = 0.5,
+    ) -> None:
+        self._min_visibility  = min_visibility
+        self._frame_interval  = 1.0 / target_fps
+        self._target_fps      = target_fps
+        self._fps_ema         = float(target_fps)
+        self._frame_idx       = 0
+        self._last_t          = 0.0
+
+        self._pose = mp.solutions.pose.Pose(
+            model_complexity=model_complexity,
+            smooth_landmarks=True,
+            enable_segmentation=False,
+            min_detection_confidence=min_detection_conf,
+            min_tracking_confidence=min_tracking_conf,
+        )
+        logger.info(
+            f"✅ PoseDetector ready  "
+            f"(complexity={model_complexity}, target={target_fps} FPS)"
+        )
+
+    # ── Lifecycle ─────────────────────────────────────────────────────────────
+
+    def close(self) -> None:
+        if self._pose:
+            self._pose.close()
+            self._pose = None
+            logger.info("🔒 PoseDetector closed")
+
+    def __enter__(self):  return self
+    def __exit__(self, *_): self.close()
+
+    # ── Main API ──────────────────────────────────────────────────────────────
+
+    def detect(self, jpeg_bytes: bytes) -> PoseResult:
+        """
+        Process one JPEG frame received from the mobile app.
+        Returns PoseResult with landmarks and joint angles.
+        Throttles to target_fps — returns error="throttled" if called too fast.
+        """
+        t0 = time.perf_counter()
+
+        # ── FPS throttle ──────────────────────────────────────────────────────
+        if self._frame_idx > 0 and (t0 - self._last_t) < self._frame_interval:
+            return PoseResult(
+                detected=False, landmarks=[], angles={},
+                fps=round(self._fps_ema, 1), latency_ms=0.0,
+                frame_idx=self._frame_idx, error="throttled",
+            )
+
+        # ── Decode JPEG → BGR frame ───────────────────────────────────────────
+        try:
+            arr   = np.frombuffer(jpeg_bytes, dtype=np.uint8)
+            frame = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+            if frame is None:
+                raise ValueError("imdecode returned None — invalid JPEG")
+        except Exception as exc:
+            logger.warning(f"Decode error: {exc}")
+            return PoseResult(
+                detected=False, landmarks=[], angles={},
+                fps=round(self._fps_ema, 1), latency_ms=0.0,
+                frame_idx=self._frame_idx, error=f"decode_error: {exc}",
+            )
+
+        # ── MediaPipe inference ───────────────────────────────────────────────
+        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        rgb.flags.writeable = False
+
+        try:
+            results = self._pose.process(rgb)
+        except Exception as exc:
+            logger.error(f"MediaPipe error: {exc}", exc_info=True)
+            return PoseResult(
+                detected=False, landmarks=[], angles={},
+                fps=round(self._fps_ema, 1), latency_ms=0.0,
+                frame_idx=self._frame_idx, error=f"mediapipe_error: {exc}",
+            )
+
+        # ── Update timing ─────────────────────────────────────────────────────
+        t1              = time.perf_counter()
+        elapsed         = t1 - self._last_t if self._last_t else 1.0 / self._target_fps
+        instant_fps     = 1.0 / elapsed
+        self._fps_ema   = 0.8 * self._fps_ema + 0.2 * instant_fps   # EMA
+        self._last_t    = t1
+        self._frame_idx += 1
+        latency_ms      = (t1 - t0) * 1000
+
+        # ── No person in frame ────────────────────────────────────────────────
+        if not results.pose_landmarks:
+            return PoseResult(
+                detected=False, landmarks=[], angles={},
+                fps=round(self._fps_ema, 1),
+                latency_ms=round(latency_ms, 2),
+                frame_idx=self._frame_idx,
+            )
+
+        # ── Build landmark list ───────────────────────────────────────────────
+        h, w    = frame.shape[:2]
+        lm_list = []
+        lm_map: dict[str, dict] = {}
+
+        for i, lm in enumerate(results.pose_landmarks.landmark):
+            name    = LANDMARK_NAMES[i] if i < len(LANDMARK_NAMES) else f"lm_{i}"
+            visible = lm.visibility >= self._min_visibility
+            entry   = {
+                "name":       name,
+                "x":          round(lm.x, 4),        # normalised 0–1
+                "y":          round(lm.y, 4),
+                "z":          round(lm.z, 4),        # depth (hips = 0)
+                "visibility": round(lm.visibility, 3),
+                "px":         int(lm.x * w),         # pixel x
+                "py":         int(lm.y * h),         # pixel y
+                "visible":    visible,
             }
-            for idx, lm in enumerate(landmarks.landmark)
-        },
-    }
+            lm_list.append(entry)
+            lm_map[name] = entry
+
+        # ── Compute joint angles ──────────────────────────────────────────────
+        angles = _compute_angles(lm_map)
+
+        return PoseResult(
+            detected=True,
+            landmarks=lm_list,
+            angles=angles,
+            fps=round(self._fps_ema, 1),
+            latency_ms=round(latency_ms, 2),
+            frame_idx=self._frame_idx,
+        )
+
+    # ── Properties ────────────────────────────────────────────────────────────
+
+    @property
+    def frame_count(self) -> int:
+        return self._frame_idx
+
+    @property
+    def current_fps(self) -> float:
+        return round(self._fps_ema, 1)
 
 
-def run():
-    cap = cv2.VideoCapture(0)
+# ── Geometry ──────────────────────────────────────────────────────────────────
 
-    # Request a smaller buffer so we always get the latest frame
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH,  CAPTURE_WIDTH)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CAPTURE_HEIGHT)
-    cap.set(cv2.CAP_PROP_FPS,          TARGET_FPS)
-    cap.set(cv2.CAP_PROP_BUFFERSIZE,   1)          # discard stale frames
-
-    frame_interval = 1.0 / TARGET_FPS              # minimum seconds per frame
-    prev_time      = time.time()
-    display_count  = 0
-
-    # model_complexity=0  → lightest model (~6 MB, fastest on CPU/GPU)
-    # smooth_landmarks=False → skip the EMA smoother (saves ~2 ms/frame)
-    # enable_segmentation=False → don't compute the segmentation mask
-    with mp_pose.Pose(
-        model_complexity=0,
-        smooth_landmarks=False,
-        enable_segmentation=False,
-        min_detection_confidence=0.5,
-        min_tracking_confidence=0.5,
-    ) as pose:
-
-        while cap.isOpened():
-            ret, frame = cap.read()
-            if not ret:
-                break
-
-            # --- hard FPS cap: drop frames that arrive too early ----------
-            now = time.time()
-            elapsed = now - prev_time
-            if elapsed < frame_interval:
-                continue
-            prev_time = now
-            timestamp_ms = int(now * 1000)
-            # ---------------------------------------------------------------
-
-            # Downscale for inference (nearest-neighbour is fastest)
-            small = cv2.resize(frame, (INFER_WIDTH, INFER_HEIGHT),
-                               interpolation=cv2.INTER_NEAREST)
-
-            # BGR → RGB, mark non-writeable to avoid a copy inside MediaPipe
-            rgb = cv2.cvtColor(small, cv2.COLOR_BGR2RGB)
-            rgb.flags.writeable = False
-            results = pose.process(rgb)
-
-            if results.pose_landmarks:
-                # Draw skeleton on the small frame (cheap) then upscale for display
-                rgb.flags.writeable = True
-                bgr_small = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
-                mp_drawing.draw_landmarks(
-                    bgr_small,
-                    results.pose_landmarks,
-                    mp_pose.POSE_CONNECTIONS,
-                    landmark_drawing_spec=_LANDMARK_STYLE,
-                    connection_drawing_spec=_CONNECTION_STYLE,
-                )
-                display_frame = cv2.resize(bgr_small, (CAPTURE_WIDTH, CAPTURE_HEIGHT),
-                                           interpolation=cv2.INTER_NEAREST)
-
-                # Emit 33-landmark JSON
-                data = get_landmarks_json(results.pose_landmarks, timestamp_ms)
-                print(json.dumps(data))
-            else:
-                display_frame = frame
-
-            # --- FPS overlay -----------------------------------------------
-            fps = 1.0 / max(elapsed, 1e-6)
-            cv2.putText(display_frame, f"FPS: {fps:.1f}",
-                        (10, 30), cv2.FONT_HERSHEY_SIMPLEX,
-                        0.8, (0, 255, 0), 2, cv2.LINE_AA)
-            # ---------------------------------------------------------------
-
-            # Only blit every DISPLAY_EVERY frames to save display overhead
-            display_count += 1
-            if display_count % DISPLAY_EVERY == 0:
-                cv2.imshow("VPT - Pose Detector", display_frame)
-
-            if cv2.waitKey(1) & 0xFF == ord("q"):
-                break
-
-    cap.release()
-    cv2.destroyAllWindows()
+def _vec2d(a: dict, b: dict) -> np.ndarray:
+    """Vector from b → a using normalised x, y."""
+    return np.array([a["x"] - b["x"], a["y"] - b["y"]], dtype=np.float32)
 
 
-if __name__ == "__main__":
-    run()
+def _angle_deg(v1: np.ndarray, v2: np.ndarray) -> float:
+    n1, n2 = np.linalg.norm(v1), np.linalg.norm(v2)
+    if n1 < 1e-6 or n2 < 1e-6:
+        return 0.0
+    cos_a = np.clip(np.dot(v1, v2) / (n1 * n2), -1.0, 1.0)
+    return round(float(np.degrees(np.arccos(cos_a))), 1)
+
+
+def _compute_angles(lm_map: dict) -> dict:
+    angles: dict[str, float] = {}
+
+    for joint, (a_name, b_name, c_name) in ANGLE_TRIPLETS.items():
+        a = lm_map.get(a_name)
+        b = lm_map.get(b_name)
+        c = lm_map.get(c_name)
+        if not (a and b and c):
+            continue
+        if not (a["visible"] and b["visible"] and c["visible"]):
+            continue
+        angles[joint] = _angle_deg(_vec2d(a, b), _vec2d(c, b))
+
+    # Symmetric averages for convenience (avg_knee, avg_hip, etc.)
+    for part in ("knee", "hip", "elbow", "shoulder"):
+        l = angles.get(f"left_{part}")
+        r = angles.get(f"right_{part}")
+        if l is not None and r is not None:
+            angles[f"avg_{part}"] = round((l + r) / 2, 1)
+        elif l is not None:
+            angles[f"avg_{part}"] = l
+        elif r is not None:
+            angles[f"avg_{part}"] = r
+
+    return angles
