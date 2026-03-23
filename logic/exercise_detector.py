@@ -33,10 +33,15 @@ class ExerciseDetector:
         self.stage = ExerciseStage.STANDING
         self.rep_count = 0
 
+    def reset(self):
+        """Reset rep count and stage (e.g., when switching exercises or starting a new set)."""
+        self.stage = ExerciseStage.STANDING
+        self.rep_count = 0
+
     def detect_stage(self, angles: dict) -> ExerciseStage:
         thresholds = THRESHOLDS[self.exercise.value]
 
-        if self.exercise == ExerciseType.SQUAT or self.exercise == ExerciseType.LUNGE:
+        if self.exercise in (ExerciseType.SQUAT, ExerciseType.LUNGE):
             left_knee = angles.get("left_knee", 180)
             right_knee = angles.get("right_knee", 180)
             avg_knee = (left_knee + right_knee) / 2
@@ -93,8 +98,10 @@ class ExerciseDetector:
         flags = []
 
         if self.exercise == ExerciseType.SQUAT:
-            left_knee = angles.get("left_knee")
+            left_knee  = angles.get("left_knee")
             right_knee = angles.get("right_knee")
+
+            # Knee alignment: warn if left and right diverge significantly
             if left_knee and right_knee:
                 if abs(left_knee - right_knee) > 15:
                     flags.append(FeedbackFlag(
@@ -103,6 +110,7 @@ class ExerciseDetector:
                         severity=FeedbackSeverity.WARNING
                     ))
 
+            # Depth check only when at the bottom of the movement
             if self.stage == ExerciseStage.DOWN:
                 avg_knee = ((left_knee or 180) + (right_knee or 180)) / 2
                 if avg_knee > 110:
@@ -118,17 +126,21 @@ class ExerciseDetector:
                         severity=FeedbackSeverity.INFO
                     ))
 
-            back = angles.get("back")
-            if back and back < 150:
-                flags.append(FeedbackFlag(
-                    code="BACK_ANGLE",
-                    message="Keep your back straight",
-                    severity=FeedbackSeverity.WARNING
-                ))
+            # Back check only during active movement (not neutral standing)
+            if self.stage in (ExerciseStage.DOWN, ExerciseStage.TRANSITION):
+                back = angles.get("back")
+                if back is not None and back < 150:
+                    flags.append(FeedbackFlag(
+                        code="BACK_ANGLE",
+                        message="Keep your back straight",
+                        severity=FeedbackSeverity.WARNING
+                    ))
 
         elif self.exercise == ExerciseType.PUSHUP:
-            left_elbow = angles.get("left_elbow")
+            left_elbow  = angles.get("left_elbow")
             right_elbow = angles.get("right_elbow")
+
+            # Elbow symmetry check
             if left_elbow and right_elbow:
                 if abs(left_elbow - right_elbow) > 15:
                     flags.append(FeedbackFlag(
@@ -137,14 +149,51 @@ class ExerciseDetector:
                         severity=FeedbackSeverity.WARNING
                     ))
 
+            # Depth check only at the bottom of the push-up
+            if self.stage == ExerciseStage.DOWN:
+                avg_elbow = ((left_elbow or 180) + (right_elbow or 180)) / 2
+                if avg_elbow > 110:
+                    flags.append(FeedbackFlag(
+                        code="PUSHUP_TOO_SHALLOW",
+                        message="Go lower — chest closer to the ground",
+                        severity=FeedbackSeverity.WARNING
+                    ))
+                else:
+                    flags.append(FeedbackFlag(
+                        code="DEPTH_OK",
+                        message="Good depth",
+                        severity=FeedbackSeverity.INFO
+                    ))
+
         elif self.exercise == ExerciseType.LUNGE:
-            left_knee = angles.get("left_knee")
-            if left_knee and left_knee < 80:
+            left_knee  = angles.get("left_knee")
+            right_knee = angles.get("right_knee")
+
+            # Check both knees — whichever is the lead knee should not pass the ankle
+            if left_knee is not None and left_knee < 80:
                 flags.append(FeedbackFlag(
                     code="KNEE_TOO_FORWARD",
                     message="Front knee too far forward",
                     severity=FeedbackSeverity.WARNING
                 ))
+            if right_knee is not None and right_knee < 80:
+                flags.append(FeedbackFlag(
+                    code="KNEE_TOO_FORWARD",
+                    message="Front knee too far forward",
+                    severity=FeedbackSeverity.WARNING
+                ))
+
+        # Emit GOOD_FORM when in the DOWN stage with no active warnings or errors
+        has_issue = any(
+            f.severity in (FeedbackSeverity.WARNING, FeedbackSeverity.ERROR)
+            for f in flags
+        )
+        if not has_issue and self.stage == ExerciseStage.DOWN:
+            flags.append(FeedbackFlag(
+                code="GOOD_FORM",
+                message="Great form!",
+                severity=FeedbackSeverity.INFO
+            ))
 
         return flags
 
