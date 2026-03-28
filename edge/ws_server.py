@@ -105,6 +105,7 @@ async def _process_request(connection: ServerConnection, request) -> None:
 async def handle_client(ws: ServerConnection) -> None:
     client_ip        = ws.remote_address[0]
     current_exercise = "squat"
+    last_latency_ms  = 0.0   # tracks last inference time; used for frame-skip
 
     logger.info(f"📱 Connected    : {client_ip}  "
                 f"(active clients: {len(_clients) + 1})")
@@ -173,6 +174,15 @@ async def handle_client(ws: ServerConnection) -> None:
                                 "message": f"base64 error: {exc}"})
                     continue
 
+                # Skip frame when the previous inference was too slow.
+                # This prevents backlog buildup and keeps throughput ≥ 15 FPS.
+                if last_latency_ms > 100:
+                    logger.debug(
+                        f"⏭  {client_ip} — frame skipped "
+                        f"(last latency {last_latency_ms:.1f} ms > 100 ms)"
+                    )
+                    continue
+
                 # Run MediaPipe in a thread so asyncio loop stays responsive
                 result = await loop.run_in_executor(
                     None, detector.detect, jpeg_bytes
@@ -181,6 +191,8 @@ async def handle_client(ws: ServerConnection) -> None:
                 # Silently drop throttled frames (mobile sent too fast)
                 if result.error == "throttled":
                     continue
+
+                last_latency_ms = result.latency_ms
 
                 # Build and send pose response
                 response: dict = {

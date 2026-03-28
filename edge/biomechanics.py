@@ -1,9 +1,10 @@
 """
 BIOMECHANICS.PY
-Analyses squat / pushup / plank from COCO-17 keypoints.
+Analyses squat / pushup / plank from MediaPipe Pose 33-landmark output.
 Consumed by ws_server.py — no camera dependency.
 """
 import logging
+import mediapipe as mp
 import numpy as np
 from enum import Enum
 from typing import Dict, List, Tuple
@@ -27,22 +28,23 @@ class MovementPhase(Enum):
     TOP        = "top"
 
 
-# ── COCO-17 indices ───────────────────────────────────────────────────────────
-NOSE           = 0
-LEFT_EYE       = 1;  RIGHT_EYE      = 2
-LEFT_EAR       = 3;  RIGHT_EAR      = 4
-LEFT_SHOULDER  = 5;  RIGHT_SHOULDER = 6
-LEFT_ELBOW     = 7;  RIGHT_ELBOW    = 8
-LEFT_WRIST     = 9;  RIGHT_WRIST    = 10
-LEFT_HIP       = 11; RIGHT_HIP      = 12
-LEFT_KNEE      = 13; RIGHT_KNEE     = 14
-LEFT_ANKLE     = 15; RIGHT_ANKLE    = 16
+# ── MediaPipe Pose landmark indices (from PoseLandmark enum) ────────────────
+_PL            = mp.solutions.pose.PoseLandmark
+NOSE           = _PL.NOSE.value
+LEFT_EYE       = _PL.LEFT_EYE.value;       RIGHT_EYE       = _PL.RIGHT_EYE.value
+LEFT_EAR       = _PL.LEFT_EAR.value;       RIGHT_EAR       = _PL.RIGHT_EAR.value
+LEFT_SHOULDER  = _PL.LEFT_SHOULDER.value;  RIGHT_SHOULDER  = _PL.RIGHT_SHOULDER.value
+LEFT_ELBOW     = _PL.LEFT_ELBOW.value;     RIGHT_ELBOW     = _PL.RIGHT_ELBOW.value
+LEFT_WRIST     = _PL.LEFT_WRIST.value;     RIGHT_WRIST     = _PL.RIGHT_WRIST.value
+LEFT_HIP       = _PL.LEFT_HIP.value;       RIGHT_HIP       = _PL.RIGHT_HIP.value
+LEFT_KNEE      = _PL.LEFT_KNEE.value;      RIGHT_KNEE      = _PL.RIGHT_KNEE.value
+LEFT_ANKLE     = _PL.LEFT_ANKLE.value;     RIGHT_ANKLE     = _PL.RIGHT_ANKLE.value
 
 
 class BiomechanicsAnalyzer:
     """
     Stateful analyser for one mobile client session.
-    Receives COCO-17 landmarks from MediaPipe via PoseDetector.
+    Receives MediaPipe Pose 33 landmarks from PoseDetector.
     """
 
     VISIBILITY_THRESHOLD       = 0.3
