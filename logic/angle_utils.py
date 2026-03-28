@@ -18,7 +18,11 @@ def calculate_angle(a, b, c):
 
 
 def get_joint_angles(landmarks):
-    
+    """
+    Compute key joint angles from a landmarks dict.
+    Each landmark must have 'x' and 'y' keys (normalised 0-1 image coords).
+    Returns a dict mapping angle name → degrees (float).
+    """
     def get_point(name):
         lm = landmarks.get(name)
         if lm is None:
@@ -27,43 +31,49 @@ def get_joint_angles(landmarks):
 
     angles = {}
 
-    # Left knee angle (hip -> knee -> ankle)
-    left_hip = get_point('left_hip')
-    left_knee = get_point('left_knee')
-    left_ankle = get_point('left_ankle')
+    left_hip       = get_point('left_hip')
+    left_knee      = get_point('left_knee')
+    left_ankle     = get_point('left_ankle')
+    right_hip      = get_point('right_hip')
+    right_knee     = get_point('right_knee')
+    right_ankle    = get_point('right_ankle')
+    left_shoulder  = get_point('left_shoulder')
+    right_shoulder = get_point('right_shoulder')
+    left_elbow     = get_point('left_elbow')
+    left_wrist     = get_point('left_wrist')
+    right_elbow    = get_point('right_elbow')
+    right_wrist    = get_point('right_wrist')
+
+    # Knee angles (hip → knee → ankle)
     if all([left_hip, left_knee, left_ankle]):
         angles['left_knee'] = calculate_angle(left_hip, left_knee, left_ankle)
-
-    # Right knee angle
-    right_hip = get_point('right_hip')
-    right_knee = get_point('right_knee')
-    right_ankle = get_point('right_ankle')
     if all([right_hip, right_knee, right_ankle]):
         angles['right_knee'] = calculate_angle(right_hip, right_knee, right_ankle)
 
-    # Left hip angle (shoulder -> hip -> knee)
-    left_shoulder = get_point('left_shoulder')
+    # Hip angles (shoulder → hip → knee)
     if all([left_shoulder, left_hip, left_knee]):
         angles['left_hip'] = calculate_angle(left_shoulder, left_hip, left_knee)
-
-    # Right hip angle
-    right_shoulder = get_point('right_shoulder')
     if all([right_shoulder, right_hip, right_knee]):
         angles['right_hip'] = calculate_angle(right_shoulder, right_hip, right_knee)
 
-    # Back angle (left shoulder -> left hip -> left knee)
-    if all([left_shoulder, left_hip, left_knee]):
-        angles['back'] = calculate_angle(left_shoulder, left_hip, left_knee)
+    # Back / torso inclination angle
+    # Measures how upright the spine is: 180° = perfectly vertical, decreases as torso leans forward.
+    # Uses mid-shoulder → mid-hip vs a virtual point directly below mid-hip (image y↓).
+    if all([left_shoulder, right_shoulder, left_hip, right_hip]):
+        mid_shoulder  = [(left_shoulder[0] + right_shoulder[0]) / 2,
+                         (left_shoulder[1] + right_shoulder[1]) / 2]
+        mid_hip       = [(left_hip[0] + right_hip[0]) / 2,
+                         (left_hip[1] + right_hip[1]) / 2]
+        virtual_below = [mid_hip[0], mid_hip[1] + 0.1]
+        angles['back'] = calculate_angle(mid_shoulder, mid_hip, virtual_below)
+    elif all([left_shoulder, left_hip]):
+        # Fallback to single-side estimate when one side is occluded
+        virtual_below = [left_hip[0], left_hip[1] + 0.1]
+        angles['back'] = calculate_angle(left_shoulder, left_hip, virtual_below)
 
-    # Left elbow angle (shoulder -> elbow -> wrist)
-    left_elbow = get_point('left_elbow')
-    left_wrist = get_point('left_wrist')
+    # Elbow angles (shoulder → elbow → wrist)
     if all([left_shoulder, left_elbow, left_wrist]):
         angles['left_elbow'] = calculate_angle(left_shoulder, left_elbow, left_wrist)
-
-    # Right elbow angle
-    right_elbow = get_point('right_elbow')
-    right_wrist = get_point('right_wrist')
     if all([right_shoulder, right_elbow, right_wrist]):
         angles['right_elbow'] = calculate_angle(right_shoulder, right_elbow, right_wrist)
 

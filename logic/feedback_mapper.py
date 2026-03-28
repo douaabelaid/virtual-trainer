@@ -26,6 +26,11 @@ FEEDBACK_MESSAGES = {
     ],
 
     # --- PUSH-UP ---
+    "PUSHUP_TOO_SHALLOW": [
+        "Go lower — bring your chest all the way to the ground.",
+        "Not deep enough — push through the full range of motion.",
+        "Chest needs to get closer to the floor.",
+    ],
     "ELBOW_FLARE": [
         "Keep your elbows tucked closer to your body.",
         "Don't let your elbows flare out — keep them at 45 degrees.",
@@ -97,8 +102,8 @@ def map_flags_to_coaching(feedback_flags: list) -> list:
                 "severity": flag.severity.value,
                 "message": message
             })
-        # Only include info if it's positive feedback
-        elif flag.severity.value == "info" and flag.code == "DEPTH_OK":
+        # Only include info for positive feedback codes
+        elif flag.severity.value == "info" and flag.code in ("DEPTH_OK", "GOOD_FORM"):
             message = get_coaching_message(flag.code)
             coaching.append({
                 "code": flag.code,
