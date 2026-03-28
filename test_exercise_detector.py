@@ -108,10 +108,26 @@ def test_no_rep_if_never_goes_down():
 # ─── Test 5: Feedback engine ──────────────────────────────────────────────────
 
 def test_back_angle_feedback_fires():
+    # Landmarks where the torso leans forward > 30° from vertical so BACK_ANGLE fires.
+    # Shoulders are shifted forward (+x) relative to hips, in a squat-depth position.
+    lean_down_landmarks = {
+        "left_hip":       {"x": 0.48, "y": 0.60},
+        "left_knee":      {"x": 0.40, "y": 0.70},
+        "left_ankle":     {"x": 0.48, "y": 0.80},
+        "right_hip":      {"x": 0.58, "y": 0.60},
+        "right_knee":     {"x": 0.68, "y": 0.70},
+        "right_ankle":    {"x": 0.58, "y": 0.80},
+        "left_shoulder":  {"x": 0.60, "y": 0.45},  # shifted forward from hip
+        "right_shoulder": {"x": 0.70, "y": 0.45},  # shifted forward from hip
+        "left_elbow":     {"x": 0.40, "y": 0.50},
+        "left_wrist":     {"x": 0.35, "y": 0.60},
+        "right_elbow":    {"x": 0.75, "y": 0.50},
+        "right_wrist":    {"x": 0.80, "y": 0.60},
+    }
     detector = ExerciseDetector(exercise="squat")
-    state = detector.update(down_landmarks)
+    state = detector.update(lean_down_landmarks)
     codes = [f.code for f in state.feedback_flags]
-    assert "BACK_ANGLE" in codes, "Expected BACK_ANGLE feedback"
+    assert "BACK_ANGLE" in codes, "Expected BACK_ANGLE feedback for forward-leaning torso"
 
 def test_feedback_has_severity():
     detector = ExerciseDetector(exercise="squat")
