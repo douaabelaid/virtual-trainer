@@ -243,3 +243,103 @@ def _compute_angles(lm_map: dict) -> dict:
             angles[f"avg_{part}"] = r
 
     return angles
+
+
+# ── Webcam live demo (python edge/pose_detector.py) ───────────────────────────
+
+if __name__ == "__main__":
+    import json
+    import sys
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
+    )
+
+    mp_drawing       = mp.solutions.drawing_utils
+    mp_drawing_styles = mp.solutions.drawing_styles
+    mp_pose          = mp.solutions.pose
+
+    cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH,  640)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+
+    if not cap.isOpened():
+        logger.error("❌ Cannot open webcam (index 0)")
+        sys.exit(1)
+
+    logger.info("📷 Webcam opened — press Q to quit")
+
+    with mp_pose.Pose(
+        model_complexity=1,
+        smooth_landmarks=True,
+        enable_segmentation=False,
+        min_detection_confidence=0.5,
+        min_tracking_confidence=0.5,
+    ) as pose:
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                logger.warning("⚠️  Failed to read frame")
+                break
+
+            h, w = frame.shape[:2]
+
+            # MediaPipe requires RGB, non-writeable for performance
+            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            rgb.flags.writeable = False
+            results = pose.process(rgb)
+            rgb.flags.writeable = True
+
+            # Draw skeleton overlay
+            if results.pose_landmarks:
+                mp_drawing.draw_landmarks(
+                    frame,
+                    results.pose_landmarks,
+                    mp_pose.POSE_CONNECTIONS,
+                    landmark_drawing_spec=mp_drawing_styles.get_default_pose_landmarks_style(),
+                )
+
+                # Build landmark JSON and print to terminal
+                lm_list = []
+                lm_map: dict[str, dict] = {}
+                for i, lm in enumerate(results.pose_landmarks.landmark):
+                    name    = LANDMARK_NAMES[i] if i < len(LANDMARK_NAMES) else f"lm_{i}"
+                    visible = lm.visibility >= 0.5
+                    entry   = {
+                        "name":       name,
+                        "x":          round(lm.x, 4),
+                        "y":          round(lm.y, 4),
+                        "z":          round(lm.z, 4),
+                        "visibility": round(lm.visibility, 3),
+                        "px":         int(lm.x * w),
+                        "py":         int(lm.y * h),
+                        "visible":    visible,
+                    }
+                    lm_list.append(entry)
+                    lm_map[name] = entry
+
+                angles = _compute_angles(lm_map)
+                payload = {"landmarks": lm_list, "angles": angles}
+                print(json.dumps(payload, separators=(",", ":")), flush=True)
+
+                # Overlay FPS / angle hints on frame
+                cv2.putText(
+                    frame,
+                    f"left_knee:{angles.get('left_knee', '--')}  "
+                    f"right_knee:{angles.get('right_knee', '--')}",
+                    (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2,
+                )
+            else:
+                cv2.putText(
+                    frame, "No pose detected", (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2,
+                )
+
+            cv2.imshow("Pose Detector", frame)
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                break
+
+    cap.release()
+    cv2.destroyAllWindows()
+    logger.info("👋 Webcam closed")
