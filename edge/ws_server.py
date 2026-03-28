@@ -52,12 +52,21 @@ def get_landmarks_json(landmarks, timestamp_ms):
         "landmarks": landmark_data
     }
 
+# Warm-start pre-loading
+print("Pre-loading MediaPipe model...")
+with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as warmup_pose:
+    dummy_frame = cv2.cvtColor(cv2.imread("dummy.jpg"), cv2.COLOR_BGR2RGB) if cv2.imread("dummy.jpg") is not None else None
+    if dummy_frame is not None:
+        warmup_pose.process(dummy_frame)
+print("Model pre-loaded successfully.")
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     print("Client connected!")
 
     cap = cv2.VideoCapture(0)
+    frame_id = 0  # Initialize frame ID
 
     with mp_pose.Pose(
         min_detection_confidence=0.5,
@@ -70,6 +79,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 break
 
             timestamp_ms = int(time.time() * 1000)
+            frame_id += 1  # Increment frame ID
 
             # Process frame
             image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -79,6 +89,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
             if results.pose_landmarks:
                 data = get_landmarks_json(results.pose_landmarks, timestamp_ms)
+                data["frame_id"] = frame_id  # Add frame ID to response
                 await websocket.send_text(json.dumps(data))
 
             # 15 FPS = wait 66ms
