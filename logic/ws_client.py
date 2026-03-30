@@ -20,10 +20,15 @@ async def connect(uri: str, exercise: str = "squat"):
             try:
                 data = json.loads(message)
 
-                # Handle both formats:
-                # Format 1: raw landmarks dict directly
-                # Format 2: wrapped in "landmarks_raw" key
-                landmarks = data.get("landmarks", data.get("landmarks_raw", data))
+                # Server sends landmarks as a list: [{"name":"left_knee","x":..,"y":..}, ...]
+                # angle_utils expects a dict:          {"left_knee": {"x":..,"y":..}, ...}
+                raw = data.get("landmarks", data.get("landmarks_raw", data))
+                if not raw:
+                    continue
+                if isinstance(raw, list):
+                    landmarks = {lm["name"]: lm for lm in raw if "name" in lm}
+                else:
+                    landmarks = raw
                 if not landmarks:
                     continue
 
