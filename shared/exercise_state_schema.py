@@ -41,6 +41,7 @@ class LandmarkPoint(BaseModel):
 
 # --- Main contract ---
 
+# NOTE: This schema is locked as of March 2026. No further changes are allowed without supervisor approval.
 class ExerciseState(BaseModel):
     timestamp_ms: int                          
     exercise: ExerciseType                     
@@ -48,4 +49,4 @@ class ExerciseState(BaseModel):
     rep_count: int                             
     joint_angles: JointAngles                  
     feedback_flags: List[FeedbackFlag] = []    
-    landmarks_raw: dict = {}                   
+    landmarks_raw: dict = {}
