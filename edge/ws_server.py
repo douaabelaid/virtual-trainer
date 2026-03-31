@@ -64,7 +64,7 @@ logging.getLogger("websockets.server").setLevel(logging.CRITICAL)
 # ── Config (all overridable via env vars) ─────────────────────────────────────
 WS_HOST        = os.getenv("WS_HOST",              "0.0.0.0")
 WS_PORT        = int(os.getenv("WS_PORT",          "8765"))
-MP_COMPLEXITY  = int(os.getenv("MP_COMPLEXITY",    "1"))
+MP_COMPLEXITY  = int(os.getenv("MP_COMPLEXITY",    "0"))
 MP_DETECT_CONF = float(os.getenv("MP_DETECT_CONF", "0.5"))
 MP_TRACK_CONF  = float(os.getenv("MP_TRACK_CONF",  "0.5"))
 TARGET_FPS     = int(os.getenv("TARGET_FPS",       "15"))
@@ -100,15 +100,12 @@ async def _process_request(connection: ServerConnection, request) -> None:
         "target_fps": TARGET_FPS,
     }).encode()
 
-    return connection.respond(
-        HTTPStatus.OK,
-        body.decode(),
-        headers=[
-            ("Content-Type",                "application/json"),
-            ("Content-Length",              str(len(body))),
-            ("Access-Control-Allow-Origin", "*"),
-        ],
-    )
+    headers = {  # type: ignore[call-arg]
+        "Content-Type":                "application/json",
+        "Content-Length":              str(len(body)),
+        "Access-Control-Allow-Origin": "*",
+    }
+    return connection.respond(HTTPStatus.OK, body.decode(), headers=headers)  # type: ignore[call-arg]
 
 
 # ── Per-client session ────────────────────────────────────────────────────────
@@ -128,6 +125,7 @@ async def handle_client(ws: ServerConnection) -> None:
         min_detection_conf=MP_DETECT_CONF,
         min_tracking_conf=MP_TRACK_CONF,
         target_fps=TARGET_FPS,
+        min_visibility=0.3,
     )
     loop = asyncio.get_event_loop()
 
@@ -207,14 +205,15 @@ async def handle_client(ws: ServerConnection) -> None:
 
                 # Build pose response and broadcast to ALL connected clients
                 response: dict = {
-                    "type":       "pose",
-                    "detected":   result.detected,
-                    "landmarks":  result.landmarks,
-                    "angles":     result.angles,
-                    "fps":        result.fps,
-                    "latency_ms": result.latency_ms,
-                    "frame_idx":  result.frame_idx,
-                    "exercise":   current_exercise,
+                    "type":         "pose",
+                    "detected":     result.detected,
+                    "landmarks":    result.landmarks,
+                    "angles":       result.angles,
+                    "fps":          result.fps,
+                    "latency_ms":   result.latency_ms,
+                    "frame_idx":    result.frame_idx,
+                    "timestamp_ms": int(time.time() * 1000),   # ← ADD THIS
+                    "exercise":     current_exercise,
                 }
                 if result.error:
                     response["error"] = result.error
@@ -246,6 +245,13 @@ async def main() -> None:
     logger.info(f"🚀 Starting pose backend  ws://{WS_HOST}:{WS_PORT}")
     logger.info(f"   MP complexity : {MP_COMPLEXITY}")
     logger.info(f"   Target FPS    : {TARGET_FPS}")
+
+    # Pre-load model BEFORE accepting connections
+    logger.info("⏳ Pre-loading MediaPipe model...")
+    _warmup_detector = PoseDetector(model_complexity=MP_COMPLEXITY)
+    cold_ms = _warmup_detector.warmup()
+    _warmup_detector.close()
+    logger.info(f"✅ Model warm — cold-start: {cold_ms:.1f} ms")
 
     async with serve(
         handle_client,

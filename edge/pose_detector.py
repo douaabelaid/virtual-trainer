@@ -15,7 +15,7 @@ import numpy as np
 logger = logging.getLogger("pose_detector")
 
 # ── 33 MediaPipe landmark names (derived from PoseLandmark enum) ─────────────
-LANDMARK_NAMES = [lm.name.lower() for lm in mp.solutions.pose.PoseLandmark]
+LANDMARK_NAMES = [lm.name.lower() for lm in mp.solutions.pose.PoseLandmark]  # type: ignore[attr-defined]
 
 # ── Joint angle triplets (vertex is the middle landmark) ─────────────────────
 ANGLE_TRIPLETS: dict[str, tuple[str, str, str]] = {
@@ -63,7 +63,7 @@ class PoseDetector:
         min_detection_conf: float = 0.5,
         min_tracking_conf:  float = 0.5,
         target_fps:         int   = TARGET_FPS,
-        min_visibility:     float = 0.5,
+        min_visibility:     float = 0.3,
     ) -> None:
         self._min_visibility  = min_visibility
         self._frame_interval  = 1.0 / target_fps
@@ -72,7 +72,7 @@ class PoseDetector:
         self._frame_idx       = 0
         self._last_t          = 0.0
 
-        self._pose = mp.solutions.pose.Pose(
+        self._pose = mp.solutions.pose.Pose(  # type: ignore[attr-defined]
             model_complexity=model_complexity,
             smooth_landmarks=True,
             enable_segmentation=False,
@@ -94,6 +94,20 @@ class PoseDetector:
 
     def __enter__(self):  return self
     def __exit__(self, *_): self.close()
+
+    # ── Warm-start ────────────────────────────────────────���───────────────────
+
+    def warmup(self) -> float:
+        """Run one dummy inference to pre-load model weights.
+
+        Returns the cold-start latency in milliseconds.
+        """
+        dummy = np.zeros((480, 640, 3), dtype=np.uint8)
+        _, buf = cv2.imencode(".jpg", dummy)
+        t0 = time.perf_counter()
+        self.detect(bytes(buf))
+        return (time.perf_counter() - t0) * 1000
+
 
     # ── Main API ──────────────────────────────────────────────────────────────
 
@@ -132,7 +146,7 @@ class PoseDetector:
         rgb.flags.writeable = False
 
         try:
-            results = self._pose.process(rgb)
+            results = self._pose.process(rgb)  # type: ignore[union-attr]
         except Exception as exc:
             logger.error(f"MediaPipe error: {exc}", exc_info=True)
             return PoseResult(
@@ -205,19 +219,6 @@ class PoseDetector:
 
 # ── Geometry ──────────────────────────────────────────────────────────────────
 
-def _vec2d(a: dict, b: dict) -> np.ndarray:
-    """Vector from b → a using normalised x, y."""
-    return np.array([a["x"] - b["x"], a["y"] - b["y"]], dtype=np.float32)
-
-
-def _angle_deg(v1: np.ndarray, v2: np.ndarray) -> float:
-    n1, n2 = np.linalg.norm(v1), np.linalg.norm(v2)
-    if n1 < 1e-6 or n2 < 1e-6:
-        return 0.0
-    cos_a = np.clip(np.dot(v1, v2) / (n1 * n2), -1.0, 1.0)
-    return round(float(np.degrees(np.arccos(cos_a))), 1)
-
-
 def _compute_angles(lm_map: dict) -> dict:
     angles: dict[str, float] = {}
 
@@ -229,7 +230,17 @@ def _compute_angles(lm_map: dict) -> dict:
             continue
         if not (a["visible"] and b["visible"] and c["visible"]):
             continue
-        angles[joint] = _angle_deg(_vec2d(a, b), _vec2d(c, b))
+        # arctan2 method — consistent with logic/angle_utils.py, works in
+        # MediaPipe's downward-Y screen coordinate system
+        ang = abs(
+            np.degrees(
+                np.arctan2(c["y"] - b["y"], c["x"] - b["x"]) -
+                np.arctan2(a["y"] - b["y"], a["x"] - b["x"])
+            )
+        )
+        if ang > 180.0:
+            ang = 360.0 - ang
+        angles[joint] = round(ang, 1)
 
     # Symmetric averages for convenience (avg_knee, avg_hip, etc.)
     for part in ("knee", "hip", "elbow", "shoulder"):
@@ -256,9 +267,9 @@ if __name__ == "__main__":
         format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
     )
 
-    mp_drawing       = mp.solutions.drawing_utils
-    mp_drawing_styles = mp.solutions.drawing_styles
-    mp_pose          = mp.solutions.pose
+    mp_drawing       = mp.solutions.drawing_utils   # type: ignore[attr-defined]
+    mp_drawing_styles = mp.solutions.drawing_styles  # type: ignore[attr-defined]
+    mp_pose          = mp.solutions.pose              # type: ignore[attr-defined]
 
     cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH,  640)
