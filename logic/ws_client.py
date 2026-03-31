@@ -20,6 +20,7 @@ async def connect(uri: str, exercise: str = "squat"):
             try:
                 data = json.loads(message)
 
+<<<<<<< HEAD
                 # Server sends landmarks as a list: [{"name":"left_knee","x":..,"y":..}, ...]
                 # angle_utils expects a dict:          {"left_knee": {"x":..,"y":..}, ...}
                 raw = data.get("landmarks", data.get("landmarks_raw", data))
@@ -29,6 +30,24 @@ async def connect(uri: str, exercise: str = "squat"):
                     landmarks = {lm["name"]: lm for lm in raw if "name" in lm}
                 else:
                     landmarks = raw
+=======
+                # Skip non-pose messages (ping, pong, exercise_set, etc.)
+                if data.get("type") != "pose":
+                    continue
+
+                if not data.get("detected"):
+                    continue
+
+                # Server sends landmarks as a list: [{"name":"left_knee","x":...,"y":...}, ...]
+                # ExerciseDetector.update() needs a dict: {"left_knee": {"x":...,"y":...}, ...}
+                raw = data.get("landmarks") or data.get("landmarks_raw") or []
+                if isinstance(raw, list):
+                    landmarks = {item["name"]: {"x": item["x"], "y": item["y"]}
+                                 for item in raw if "name" in item}
+                else:
+                    landmarks = raw  # already a dict (legacy format)
+
+>>>>>>> 13ea35c97241202eca01419d6845378a669c9cad
                 if not landmarks:
                     continue
 
@@ -87,5 +106,10 @@ if __name__ == "__main__":
                         help="Max reconnect attempts (default: 5)")
     args = parser.parse_args()
 
-    URI = f"ws://{args.host}:{args.port}/ws"
+    # Auto-select wss:// for port 443 (ngrok) or explicit https ports
+    scheme = "wss" if args.port == 443 else "ws"
+    if args.port in (80, 443):
+        URI = f"{scheme}://{args.host}/ws"
+    else:
+        URI = f"{scheme}://{args.host}:{args.port}/ws"
     asyncio.run(connect_with_retry(URI, args.exercise, args.retries))
