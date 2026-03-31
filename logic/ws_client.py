@@ -20,17 +20,6 @@ async def connect(uri: str, exercise: str = "squat"):
             try:
                 data = json.loads(message)
 
-<<<<<<< HEAD
-                # Server sends landmarks as a list: [{"name":"left_knee","x":..,"y":..}, ...]
-                # angle_utils expects a dict:          {"left_knee": {"x":..,"y":..}, ...}
-                raw = data.get("landmarks", data.get("landmarks_raw", data))
-                if not raw:
-                    continue
-                if isinstance(raw, list):
-                    landmarks = {lm["name"]: lm for lm in raw if "name" in lm}
-                else:
-                    landmarks = raw
-=======
                 # Skip non-pose messages (ping, pong, exercise_set, etc.)
                 if data.get("type") != "pose":
                     continue
@@ -46,8 +35,6 @@ async def connect(uri: str, exercise: str = "squat"):
                                  for item in raw if "name" in item}
                 else:
                     landmarks = raw  # already a dict (legacy format)
-
->>>>>>> 13ea35c97241202eca01419d6845378a669c9cad
                 if not landmarks:
                     continue
 

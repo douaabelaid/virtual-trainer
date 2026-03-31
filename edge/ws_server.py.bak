@@ -1,0 +1,114 @@
+import asyncio
+import json
+import time
+import cv2
+from fastapi import FastAPI, WebSocket
+from fastapi.responses import HTMLResponse
+import uvicorn
+
+# Student A
+from edge.pose_detector import PoseDetector
+
+# Student B
+from logic.exercise_detector import ExerciseDetector
+from logic.feedback_mapper import map_feedback
+
+app = FastAPI()
+
+# Initialize systems
+pose_detector = PoseDetector()
+exercise_detector = ExerciseDetector()
+
+# Warmup (important for latency)
+pose_detector.warmup()
+
+# Camera setup (optimized)
+cap = cv2.VideoCapture(0)
+cap.set(3, 640)   # width
+cap.set(4, 480)   # height
+
+frame_id = 0
+
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+
+    global frame_id
+
+    try:
+        while True:
+            start_time = time.time()
+
+            ret, frame = cap.read()
+            if not ret:
+                continue
+
+            frame_id += 1
+
+            # 🔥 Skip frames to improve performance
+            if frame_id % 2 != 0:
+                continue
+
+            # Pose detection (Student A)
+            landmarks = pose_detector.get_landmarks(frame)
+
+            if landmarks is None:
+                continue
+
+            # 🔥 Reduce data (send only important points)
+            filtered_landmarks = {
+                "left_hip": landmarks.get("left_hip"),
+                "left_knee": landmarks.get("left_knee"),
+                "left_ankle": landmarks.get("left_ankle"),
+                "right_hip": landmarks.get("right_hip"),
+                "right_knee": landmarks.get("right_knee"),
+                "right_ankle": landmarks.get("right_ankle"),
+                "left_shoulder": landmarks.get("left_shoulder"),
+                "right_shoulder": landmarks.get("right_shoulder"),
+            }
+
+            # Exercise detection (Student B)
+            result = exercise_detector.process(filtered_landmarks)
+
+            # Feedback mapping
+            feedback = map_feedback(result)
+
+            # Final output
+            output = {
+                "timestamp_ms": int(time.time() * 1000),
+                "exercise": result.get("exercise"),
+                "stage": result.get("stage"),
+                "rep_count": result.get("rep_count"),
+                "feedback": feedback,
+                "landmarks": filtered_landmarks
+            }
+
+            # Send data
+            await websocket.send_text(json.dumps(output))
+
+            # 🔥 FPS control (optional)
+            elapsed = time.time() - start_time
+            await asyncio.sleep(max(0, 0.03 - elapsed))  # ~30 FPS
+
+    except Exception as e:
+        print("WebSocket error:", e)
+
+    finally:
+        await websocket.close()
+
+
+@app.get("/")
+def index():
+    return HTMLResponse("""
+    <html>
+        <head><title>AI Fitness Coach</title></head>
+        <body>
+            <h1>WebSocket Running...</h1>
+        </body>
+    </html>
+    """)
+
+
+if __name__ == "__main__":
+    uvicorn.run("edge.ws_server:app", host="0.0.0.0", port=8000, reload=True)
