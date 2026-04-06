@@ -241,5 +241,3 @@ class ExerciseDetector:
                 self._last_feedback_time[flag.code] = now
                 throttled.append(flag)
         return throttled
-
-
