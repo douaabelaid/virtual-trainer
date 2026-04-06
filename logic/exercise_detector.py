@@ -1,4 +1,4 @@
-import sys
+kimport sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -13,8 +13,6 @@ import time
 # Prevents per-frame spam during real user testing.
 FEEDBACK_COOLDOWN_SECONDS = 3.0
 
-<<<<<<< HEAD
-=======
 # --- Exercise Configuration ---
 # All thresholds in one place for easy tuning during testing
 
@@ -33,7 +31,6 @@ PUSHUP_CONFIG = {
     "shallow_depth_threshold": 110,    # Min elbow angle to warn "too shallow"
 }
 
->>>>>>> ad996c9d282af456d1298d40c8d3b7d769c6bdf4
 # --- Angle Thresholds ---
 # Legacy format for compatibility with existing code
 
@@ -143,11 +140,7 @@ class ExerciseDetector:
 
             # Knee alignment: warn if left and right diverge significantly
             if left_knee is not None and right_knee is not None:
-<<<<<<< HEAD
-                if abs(left_knee - right_knee) > 15:
-=======
                 if abs(left_knee - right_knee) > SQUAT_CONFIG["knee_asymmetry_threshold"]:
->>>>>>> ad996c9d282af456d1298d40c8d3b7d769c6bdf4
                     flags.append(FeedbackFlag(
                         code="KNEE_CAVE",
                         message="Left knee caving inward",
@@ -186,11 +179,7 @@ class ExerciseDetector:
 
             # Elbow symmetry check
             if left_elbow is not None and right_elbow is not None:
-<<<<<<< HEAD
-                if abs(left_elbow - right_elbow) > 15:
-=======
                 if abs(left_elbow - right_elbow) > PUSHUP_CONFIG["elbow_asymmetry_threshold"]:
->>>>>>> ad996c9d282af456d1298d40c8d3b7d769c6bdf4
                     flags.append(FeedbackFlag(
                         code="ELBOW_FLARE",
                         message="Keep elbows even",
@@ -252,5 +241,3 @@ class ExerciseDetector:
                 self._last_feedback_time[flag.code] = now
                 throttled.append(flag)
         return throttled
-
-
