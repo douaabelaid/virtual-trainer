@@ -42,6 +42,7 @@ Server → Mobile (JSON)
 
 import asyncio
 import base64
+from datetime import datetime
 import json
 import logging
 import os
@@ -50,6 +51,7 @@ import time
 from http import HTTPStatus
 from pathlib import Path
 
+import numpy as np
 import websockets
 from websockets.asyncio.server import ServerConnection, serve
 
@@ -97,6 +99,69 @@ _clients: set[ServerConnection] = set()
 _start_time = time.time()
 
 
+# ── Session Logger ────────────────────────────────────────────────────────────
+
+class SessionLogger:
+    """Logs per-frame latency metrics to a session-specific JSON file."""
+
+    def __init__(self, logs_dir: Path = Path("logs")):
+        self.logs_dir = logs_dir
+        self.logs_dir.mkdir(exist_ok=True)
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.log_file_path = self.logs_dir / f"session_{timestamp}.json"
+        
+        self.file_handle = open(self.log_file_path, "w")
+        self.session_start = time.time()
+        
+        self.latencies: list[float] = []
+        self.frame_count = 0
+        self.high_latency_count = 0
+        
+        logger.info(f"📊 Session log: {self.log_file_path}")
+    
+    def log_frame(self, frame_idx: int, latency_ms: float, fps: float, timestamp_ms: int) -> None:
+        """Write one JSON line per frame."""
+        self.frame_count += 1
+        self.latencies.append(latency_ms)
+        
+        if latency_ms > 120:
+            self.high_latency_count += 1
+        
+        frame_data = {
+            "frame_idx": frame_idx,
+            "latency_ms": round(latency_ms, 2),
+            "e2e_latency_ms": round(latency_ms, 2),  # Same for now (can be extended)
+            "fps": round(fps, 2),
+            "timestamp_ms": timestamp_ms,
+        }
+        self.file_handle.write(json.dumps(frame_data, separators=(",", ":")) + "\n")
+    
+    def close(self) -> None:
+        """Write summary block and close file."""
+        if not self.file_handle or self.file_handle.closed:
+            return
+        
+        session_duration = time.time() - self.session_start
+        
+        summary = {
+            "type": "summary",
+            "total_frames": self.frame_count,
+            "avg_latency_ms": round(float(np.mean(self.latencies)), 2) if self.latencies else 0.0,
+            "p95_latency_ms": round(float(np.percentile(self.latencies, 95)), 2) if self.latencies else 0.0,
+            "p99_latency_ms": round(float(np.percentile(self.latencies, 99)), 2) if self.latencies else 0.0,
+            "high_latency_count": self.high_latency_count,
+            "session_duration_s": round(session_duration, 2),
+        }
+        
+        self.file_handle.write(json.dumps(summary, separators=(",", ":"), indent=2) + "\n")
+        self.file_handle.flush()
+        self.file_handle.close()
+        
+        logger.info(f"📊 Session summary: {self.frame_count} frames, "
+                   f"P95={summary['p95_latency_ms']}ms, P99={summary['p99_latency_ms']}ms")
+
+
 # ── HTTP handler: answers Codespaces health-check probes ─────────────────────
 
 async def _process_request(connection: ServerConnection, request) -> None:
@@ -142,6 +207,9 @@ async def handle_client(ws: ServerConnection) -> None:
 
     # One ExerciseDetector per client (if logic layer available)
     logic_detector = ExerciseDetector(exercise=current_exercise) if _LOGIC_AVAILABLE else None
+
+    # One SessionLogger per client
+    session_logger = SessionLogger(logs_dir=_ROOT / "logs")
 
     loop = asyncio.get_event_loop()
 
@@ -248,6 +316,14 @@ async def handle_client(ws: ServerConnection) -> None:
 
                 await send(response)
 
+                # ── Log frame metrics ─────────────────────────────────────────
+                session_logger.log_frame(
+                    frame_idx=result.frame_idx,
+                    latency_ms=result.latency_ms,
+                    fps=result.fps,
+                    timestamp_ms=response["timestamp_ms"],
+                )
+
                 # ── Stream voice coaching (fire-and-forget) ───────────────────
                 if _audio_streamer and feedback_flags:
                     asyncio.create_task(
@@ -267,6 +343,7 @@ async def handle_client(ws: ServerConnection) -> None:
     finally:
         _clients.discard(ws)
         detector.close()
+        session_logger.close()
         logger.info(f"🧹 Cleaned up   : {client_ip}  (active clients: {len(_clients)})")
 
 
