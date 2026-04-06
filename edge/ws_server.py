@@ -210,15 +210,26 @@ async def handle_client(ws: ServerConnection) -> None:
                     continue
 
                 # ── Build pose response ───────────────────────────────────────
+                # Build landmarks_raw dict for backward compatibility with ws_client.py
+                landmarks_dict = {}
+                if result.landmarks:
+                    landmarks_dict = {
+                        lm["name"]: {"x": lm["x"], "y": lm["y"]}
+                        for lm in result.landmarks
+                        if lm.get("visible", True)
+                    }
+                
                 response: dict = {
                     "type":       "pose",
                     "detected":   result.detected,
-                    "landmarks":  result.landmarks,
+                    "landmarks":  result.landmarks,      # List format (Phase 2, new)
+                    "landmarks_raw": landmarks_dict,     # Dict format (backward compat)
                     "angles":     result.angles,
                     "fps":        result.fps,
                     "latency_ms": result.latency_ms,
                     "frame_idx":  result.frame_idx,
                     "exercise":   current_exercise,
+                    "timestamp_ms": int(time.time() * 1000),  # Added for compatibility
                 }
                 if result.error:
                     response["error"] = result.error
@@ -227,12 +238,7 @@ async def handle_client(ws: ServerConnection) -> None:
                 feedback_flags = []
                 if logic_detector and result.detected and result.landmarks:
                     try:
-                        # Convert landmark list → dict for ExerciseDetector
-                        landmarks_dict = {
-                            lm["name"]: {"x": lm["x"], "y": lm["y"]}
-                            for lm in result.landmarks
-                            if lm.get("visible", True)
-                        }
+                        # Use pre-built landmarks_dict
                         state = logic_detector.update(landmarks_dict)
                         feedback_flags = state.feedback_flags
                         response["rep_count"] = state.rep_count
