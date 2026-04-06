@@ -69,31 +69,46 @@ class ExerciseDetector:
         thresholds = THRESHOLDS[self.exercise.value]
 
         if self.exercise in (ExerciseType.SQUAT, ExerciseType.LUNGE):
-            left_knee = angles.get("left_knee", 180)
-            right_knee = angles.get("right_knee", 180)
+            left_knee = angles.get("left_knee")
+            right_knee = angles.get("right_knee")
+
+            # Collect visible knees
+            visible_knees = []
+            if left_knee is not None: visible_knees.append(left_knee)
+            if right_knee is not None: visible_knees.append(right_knee)
+
+            if not visible_knees:
+                return ExerciseStage.STANDING # Cannot detect
 
             if self.exercise == ExerciseType.SQUAT:
-                # Both legs bend equally — use the average
-                avg_knee = (left_knee + right_knee) / 2
+                # Use minimum to support side-profile where one leg is occluded
+                effective_knee = min(visible_knees)
             else:
-                # Lunge — only the front (most bent) leg matters
-                avg_knee = min(left_knee, right_knee)
+                effective_knee = min(visible_knees)
 
-            if avg_knee < thresholds["down"]["left_knee"]:
+            if effective_knee < thresholds["down"]["left_knee"]:
                 return ExerciseStage.DOWN
-            elif avg_knee > thresholds["standing"]["left_knee"]:
+            elif effective_knee > thresholds["standing"]["left_knee"]:
                 return ExerciseStage.STANDING
             else:
                 return ExerciseStage.TRANSITION
 
         elif self.exercise == ExerciseType.PUSHUP:
-            left_elbow = angles.get("left_elbow", 180)
-            right_elbow = angles.get("right_elbow", 180)
-            avg_elbow = (left_elbow + right_elbow) / 2
+            left_elbow = angles.get("left_elbow")
+            right_elbow = angles.get("right_elbow")
+            
+            visible_elbows = []
+            if left_elbow is not None: visible_elbows.append(left_elbow)
+            if right_elbow is not None: visible_elbows.append(right_elbow)
 
-            if avg_elbow < thresholds["down"]["left_elbow"]:
+            if not visible_elbows:
+                 return ExerciseStage.STANDING
+
+            effective_elbow = min(visible_elbows)
+
+            if effective_elbow < thresholds["down"]["left_elbow"]:
                 return ExerciseStage.DOWN
-            elif avg_elbow > thresholds["standing"]["left_elbow"]:
+            elif effective_elbow > thresholds["standing"]["left_elbow"]:
                 return ExerciseStage.STANDING
             else:
                 return ExerciseStage.TRANSITION
