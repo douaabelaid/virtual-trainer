@@ -45,28 +45,28 @@ def get_joint_angles(landmarks):
     right_wrist    = get_point('right_wrist')
 
     # Knee angles (hip → knee → ankle)
-    if all([left_hip, left_knee, left_ankle]):
+    if left_hip is not None and left_knee is not None and left_ankle is not None:
         angles['left_knee'] = calculate_angle(left_hip, left_knee, left_ankle)
-    if all([right_hip, right_knee, right_ankle]):
+    if right_hip is not None and right_knee is not None and right_ankle is not None:
         angles['right_knee'] = calculate_angle(right_hip, right_knee, right_ankle)
 
     # Hip angles (shoulder → hip → knee)
-    if all([left_shoulder, left_hip, left_knee]):
+    if left_shoulder is not None and left_hip is not None and left_knee is not None:
         angles['left_hip'] = calculate_angle(left_shoulder, left_hip, left_knee)
-    if all([right_shoulder, right_hip, right_knee]):
+    if right_shoulder is not None and right_hip is not None and right_knee is not None:
         angles['right_hip'] = calculate_angle(right_shoulder, right_hip, right_knee)
 
     # Back / torso inclination angle
     # Measures how upright the spine is: 180° = perfectly vertical, decreases as torso leans forward.
     # Uses mid-shoulder → mid-hip vs a virtual point directly below mid-hip (image y↓).
-    if all([left_shoulder, right_shoulder, left_hip, right_hip]):
+    if left_shoulder is not None and right_shoulder is not None and left_hip is not None and right_hip is not None:
         mid_shoulder  = [(left_shoulder[0] + right_shoulder[0]) / 2,
                          (left_shoulder[1] + right_shoulder[1]) / 2]
         mid_hip       = [(left_hip[0] + right_hip[0]) / 2,
                          (left_hip[1] + right_hip[1]) / 2]
         virtual_below = [mid_hip[0], mid_hip[1] + 0.1]
         angles['back'] = calculate_angle(mid_shoulder, mid_hip, virtual_below)
-    elif all([left_shoulder, left_hip]):
+    elif left_shoulder is not None and left_hip is not None:
         # Fallback to single-side estimate when one side is occluded
         virtual_below = [left_hip[0], left_hip[1] + 0.1]
         angles['back'] = calculate_angle(left_shoulder, left_hip, virtual_below)

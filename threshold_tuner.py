@@ -182,7 +182,7 @@ def generate_patch(exercise: str, results: dict) -> str:
         f"  Suggested patch for exercise_detector.py → THRESHOLDS\n"
         f"{'─'*54}\n"
         f'  "{exercise}": {{\n'
-        f'      "down":     {{"left_{joints[0].split("_")[1]}: {avg_down},  "right_{joints[0].split("_")[1]}": {avg_down}}},\n'
+        f'      "down":     {{"left_{joints[0].split("_")[1]}": {avg_down},  "right_{joints[0].split("_")[1]}": {avg_down}}},\n'
         f'      "standing": {{"left_{joints[0].split("_")[1]}": {avg_stand}, "right_{joints[0].split("_")[1]}": {avg_stand}}},\n'
         f"  }}\n"
         f"{'─'*54}\n"

@@ -4,18 +4,36 @@ Decodes JPEG frames, runs MediaPipe Pose, returns landmarks + joint angles.
 """
 
 import logging
+import os
 import time
 from dataclasses import dataclass, field
 from typing import Optional
 
 import cv2
 import mediapipe as mp
+from mediapipe.tasks import python as mp_tasks
+from mediapipe.tasks.python import vision as mp_vision
 import numpy as np
 
 logger = logging.getLogger("pose_detector")
 
-# ── 33 MediaPipe landmark names (derived from PoseLandmark enum) ─────────────
-LANDMARK_NAMES = [lm.name.lower() for lm in mp.solutions.pose.PoseLandmark]
+# ── 33 MediaPipe landmark names ───────────────────────────────────────────────
+LANDMARK_NAMES = [
+    "nose", "left_eye_inner", "left_eye", "left_eye_outer",
+    "right_eye_inner", "right_eye", "right_eye_outer",
+    "left_ear", "right_ear", "mouth_left", "mouth_right",
+    "left_shoulder", "right_shoulder",
+    "left_elbow", "right_elbow",
+    "left_wrist", "right_wrist",
+    "left_pinky", "right_pinky",
+    "left_index", "right_index",
+    "left_thumb", "right_thumb",
+    "left_hip", "right_hip",
+    "left_knee", "right_knee",
+    "left_ankle", "right_ankle",
+    "left_heel", "right_heel",
+    "left_foot_index", "right_foot_index",
+]
 
 # ── Joint angle triplets (vertex is the middle landmark) ─────────────────────
 ANGLE_TRIPLETS: dict[str, tuple[str, str, str]] = {
@@ -72,13 +90,18 @@ class PoseDetector:
         self._frame_idx       = 0
         self._last_t          = 0.0
 
-        self._pose = mp.solutions.pose.Pose(
-            model_complexity=model_complexity,
-            smooth_landmarks=True,
-            enable_segmentation=False,
-            min_detection_confidence=min_detection_conf,
+        _model_path = os.path.join(os.path.dirname(__file__), "..", "pose_landmarker.task")
+        _base_opts  = mp_tasks.BaseOptions(model_asset_path=_model_path)
+        _options    = mp_vision.PoseLandmarkerOptions(
+            base_options=_base_opts,
+            running_mode=mp_vision.RunningMode.IMAGE,
+            num_poses=1,
+            min_pose_detection_confidence=min_detection_conf,
+            min_pose_presence_confidence=min_detection_conf,
             min_tracking_confidence=min_tracking_conf,
+            output_segmentation_masks=False,
         )
+        self._pose = mp_vision.PoseLandmarker.create_from_options(_options)
         logger.info(
             f"✅ PoseDetector ready  "
             f"(complexity={model_complexity}, target={target_fps} FPS)"
@@ -129,10 +152,10 @@ class PoseDetector:
 
         # ── MediaPipe inference ───────────────────────────────────────────────
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        rgb.flags.writeable = False
 
         try:
-            results = self._pose.process(rgb)
+            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+            results  = self._pose.detect(mp_image)
         except Exception as exc:
             logger.error(f"MediaPipe error: {exc}", exc_info=True)
             return PoseResult(
@@ -164,7 +187,7 @@ class PoseDetector:
         lm_list = []
         lm_map: dict[str, dict] = {}
 
-        for i, lm in enumerate(results.pose_landmarks.landmark):
+        for i, lm in enumerate(results.pose_landmarks[0]):
             name    = LANDMARK_NAMES[i] if i < len(LANDMARK_NAMES) else f"lm_{i}"
             visible = lm.visibility >= self._min_visibility
             entry   = {

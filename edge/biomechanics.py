@@ -2,6 +2,10 @@
 BIOMECHANICS.PY
 Analyses squat / pushup / plank from MediaPipe Pose 33-landmark output.
 Consumed by ws_server.py — no camera dependency.
+
+NOTE: This module uses the legacy MediaPipe solutions API (mp.solutions.pose).
+It is NOT part of the main ws_server pipeline (which uses the Tasks API via
+pose_detector.py). Keep this file separate from that pipeline.
 """
 import logging
 import mediapipe as mp

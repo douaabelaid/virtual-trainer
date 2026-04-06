@@ -39,7 +39,7 @@ from logic.feedback_mapper import map_flags_to_coaching
 
 # ─── Config ───────────────────────────────────────────────────────────────────
 
-URI                  = "wss://unpendulously-cingulate-cortney.ngrok-free.dev/ws"
+URI                  = "ws://localhost:8765/ws"
 LATENCY_THRESHOLD_MS = 100
 HISTORY_LEN          = 20   # frames to keep for sparkline
 

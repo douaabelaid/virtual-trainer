@@ -20,40 +20,20 @@ async def connect(uri: str, exercise: str = "squat"):
             try:
                 data = json.loads(message)
 
-                # Skip non-pose messages (ping, pong, exercise_set, etc.)
-                if data.get("type") != "pose":
+                # REMOVE the broken type/detected filters — server doesn't set these
+                # Get landmarks — server sends as dict already
+                landmarks = data.get("landmarks") or data.get("landmarks_raw") or {}
+                if not landmarks or not isinstance(landmarks, dict):
                     continue
 
-                if not data.get("detected"):
-                    continue
-
-                # Server sends landmarks as a list: [{"name":"left_knee","x":...,"y":...}, ...]
-                # ExerciseDetector.update() needs a dict: {"left_knee": {"x":...,"y":...}, ...}
-                raw = data.get("landmarks") or data.get("landmarks_raw") or []
-                if isinstance(raw, list):
-                    landmarks = {item["name"]: {"x": item["x"], "y": item["y"]}
-                                 for item in raw if "name" in item}
-                else:
-                    landmarks = raw  # already a dict (legacy format)
-
-                if not landmarks:
-                    continue
-
-                # Run exercise detection
                 state = detector.update(landmarks)
-
-                # Get coaching messages
                 coaching = map_flags_to_coaching(state.feedback_flags)
 
-                # Display live output
-                print(f"Stage: {state.stage.value.upper():12} | Reps: {state.rep_count}", end="")
-
+                print(f"\rStage: {state.stage.value.upper():<12} | Reps: {state.rep_count}", end="")
                 if coaching:
                     print()
                     for item in coaching:
                         print(f"  [{item['severity'].upper()}] {item['message']}")
-                else:
-                    print()
 
             except json.JSONDecodeError:
                 print("Invalid JSON received")

@@ -27,7 +27,7 @@ from logic.feedback_mapper import map_flags_to_coaching
 
 # ─── Config ───────────────────────────────────────────────────────────────────
 
-URI                  = "wss://unpendulously-cingulate-cortney.ngrok-free.dev/ws"
+URI = os.getenv("VPT_URI", "ws://localhost:8765/ws")
 LATENCY_THRESHOLD_MS = 100
 
 # ─── Recorder ─────────────────────────────────────────────────────────────────
@@ -137,6 +137,8 @@ if __name__ == "__main__":
     parser.add_argument("--exercise", default="squat", choices=["squat", "pushup", "lunge"])
     parser.add_argument("--out",      default=f"session_{int(time.time())}.json",
                         help="Output JSON file path")
+    parser.add_argument("--uri",      default=URI,
+                        help="WebSocket server URI (default: ws://localhost:8000/ws)")
     args = parser.parse_args()
 
-    asyncio.run(connect(URI, args.exercise, args.out))
+    asyncio.run(connect(args.uri, args.exercise, args.out))

@@ -9,6 +9,10 @@ from shared.exercise_state_schema import (
 )
 import time
 
+# Minimum seconds between consecutive emissions of the same feedback code.
+# Prevents per-frame spam during real user testing.
+FEEDBACK_COOLDOWN_SECONDS = 3.0
+
 # --- Angle Thresholds ---
 
 THRESHOLDS = {
@@ -33,12 +37,14 @@ class ExerciseDetector:
         self.stage = ExerciseStage.STANDING
         self.rep_count = 0
         self._was_down = False   # tracks that we reached DOWN in the current rep
+        self._last_feedback_time: dict[str, float] = {}  # code -> last emission timestamp
 
     def reset(self):
         """Reset rep count and stage (e.g., when switching exercises or starting a new set)."""
         self.stage = ExerciseStage.STANDING
         self.rep_count = 0
         self._was_down = False
+        self._last_feedback_time.clear()
 
     def detect_stage(self, angles: dict) -> ExerciseStage:
         thresholds = THRESHOLDS[self.exercise.value]
@@ -114,7 +120,7 @@ class ExerciseDetector:
             right_knee = angles.get("right_knee")
 
             # Knee alignment: warn if left and right diverge significantly
-            if left_knee and right_knee:
+            if left_knee is not None and right_knee is not None:
                 if abs(left_knee - right_knee) > 15:
                     flags.append(FeedbackFlag(
                         code="KNEE_CAVE",
@@ -153,7 +159,7 @@ class ExerciseDetector:
             right_elbow = angles.get("right_elbow")
 
             # Elbow symmetry check
-            if left_elbow and right_elbow:
+            if left_elbow is not None and right_elbow is not None:
                 if abs(left_elbow - right_elbow) > 15:
                     flags.append(FeedbackFlag(
                         code="ELBOW_FLARE",
@@ -207,6 +213,14 @@ class ExerciseDetector:
                 severity=FeedbackSeverity.INFO
             ))
 
-        return flags
+        # Throttle: drop any flag whose code was emitted within the cooldown window.
+        now = time.monotonic()
+        throttled = []
+        for flag in flags:
+            last = self._last_feedback_time.get(flag.code, 0.0)
+            if now - last >= FEEDBACK_COOLDOWN_SECONDS:
+                self._last_feedback_time[flag.code] = now
+                throttled.append(flag)
+        return throttled
 
 

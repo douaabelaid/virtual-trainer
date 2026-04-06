@@ -74,6 +74,17 @@ _clients: set[ServerConnection] = set()
 _start_time = time.time()
 
 
+async def _broadcast(payload: dict) -> None:
+    """Send a message to every connected client."""
+    if not _clients:
+        return
+    message = json.dumps(payload, separators=(",", ":"))
+    await asyncio.gather(
+        *[client.send(message) for client in _clients],
+        return_exceptions=True,
+    )
+
+
 # ── HTTP handler: answers Codespaces health-check probes ─────────────────────
 
 async def _process_request(connection: ServerConnection, request) -> None:
@@ -194,7 +205,7 @@ async def handle_client(ws: ServerConnection) -> None:
 
                 last_latency_ms = result.latency_ms
 
-                # Build and send pose response
+                # Build pose response and broadcast to ALL connected clients
                 response: dict = {
                     "type":       "pose",
                     "detected":   result.detected,
@@ -208,7 +219,7 @@ async def handle_client(ws: ServerConnection) -> None:
                 if result.error:
                     response["error"] = result.error
 
-                await send(response)
+                await _broadcast(response)
 
             # ── unknown ───────────────────────────────────────────────────────
             else:
