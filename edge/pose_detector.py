@@ -8,9 +8,15 @@ import time
 from dataclasses import dataclass, field
 from typing import Optional
 
+import os
+
 import cv2
 import mediapipe as mp
+from mediapipe.tasks import python as _mp_tasks
+from mediapipe.tasks.python import vision as _mp_vision
 import numpy as np
+
+_TASK_MODEL = os.path.join(os.path.dirname(__file__), "..", "pose_landmarker.task")
 
 logger = logging.getLogger("pose_detector")
 
@@ -89,13 +95,17 @@ class PoseDetector:
         self._frame_idx       = 0
         self._last_t          = 0.0
 
-        self._pose = mp.solutions.pose.Pose(
-            model_complexity=model_complexity,
-            smooth_landmarks=True,
-            enable_segmentation=False,
-            min_detection_confidence=min_detection_conf,
+        base_options = _mp_tasks.BaseOptions(model_asset_path=_TASK_MODEL)
+        options = _mp_vision.PoseLandmarkerOptions(
+            base_options=base_options,
+            running_mode=_mp_vision.RunningMode.IMAGE,
+            num_poses=1,
+            min_pose_detection_confidence=min_detection_conf,
+            min_pose_presence_confidence=min_detection_conf,
             min_tracking_confidence=min_tracking_conf,
+            output_segmentation_masks=False,
         )
+        self._pose = _mp_vision.PoseLandmarker.create_from_options(options)
         logger.info(
             f"✅ PoseDetector ready  "
             f"(complexity={model_complexity}, target={target_fps} FPS)"
@@ -104,7 +114,7 @@ class PoseDetector:
     # ── Lifecycle ─────────────────────────────────────────────────────────────
 
     def close(self) -> None:
-        if self._pose:
+        if self._pose is not None:
             self._pose.close()
             self._pose = None
             logger.info("🔒 PoseDetector closed")
@@ -146,10 +156,10 @@ class PoseDetector:
 
         # ── MediaPipe inference ───────────────────────────────────────────────
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        rgb.flags.writeable = False
 
         try:
-            results = self._pose.process(rgb)
+            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+            results  = self._pose.detect(mp_image)
         except Exception as exc:
             logger.error(f"MediaPipe error: {exc}", exc_info=True)
             return PoseResult(
@@ -181,7 +191,7 @@ class PoseDetector:
         lm_list = []
         lm_map: dict[str, dict] = {}
 
-        for i, lm in enumerate(results.pose_landmarks.landmark):
+        for i, lm in enumerate(results.pose_landmarks[0]):
             name    = LANDMARK_NAMES[i] if i < len(LANDMARK_NAMES) else f"lm_{i}"
             visible = lm.visibility >= self._min_visibility
             entry   = {
