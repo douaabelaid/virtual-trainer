@@ -78,7 +78,8 @@ class ExerciseDetector:
             if right_knee is not None: visible_knees.append(right_knee)
 
             if not visible_knees:
-                return ExerciseStage.STANDING # Cannot detect
+                self._was_down = False # Cancel mid-rep progress if they vanish
+                return ExerciseStage.STANDING # Reset to standing when out of frame
 
             if self.exercise == ExerciseType.SQUAT:
                 # Use minimum to support side-profile where one leg is occluded
@@ -102,16 +103,8 @@ class ExerciseDetector:
             if right_elbow is not None: visible_elbows.append(right_elbow)
 
             if not visible_elbows:
-                 return ExerciseStage.STANDING
-
-            effective_elbow = min(visible_elbows)
-
-            if effective_elbow < thresholds["down"]["left_elbow"]:
-                return ExerciseStage.DOWN
-            elif effective_elbow > thresholds["standing"]["left_elbow"]:
+                self._was_down = False
                 return ExerciseStage.STANDING
-            else:
-                return ExerciseStage.TRANSITION
 
         return ExerciseStage.STANDING
 

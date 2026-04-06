@@ -26,8 +26,11 @@ def get_joint_angles(landmarks):
     def get_point(name):
         lm = landmarks.get(name)
         if lm is None:
-            return None
-        return [lm['x'], lm['y']]
+            return None        # MediaPipe provides a visibility score for each landmark.
+        # If the joint is not reliably seen, ignore it.
+        vis = lm.get('visibility', 1.0)
+        if vis < 0.5:
+            return None        return [lm['x'], lm['y']]
 
     angles = {}
 

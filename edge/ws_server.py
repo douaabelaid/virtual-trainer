@@ -72,6 +72,7 @@ if str(_ROOT) not in sys.path:
 
 from pose_detector import PoseDetector  # noqa: E402
 from audio_streamer import AudioStreamer, AudioConfig, AudioMode, AudioMessage, AudioFormat, create_audio_message  # noqa: E402
+from logic.exercise_detector import ExerciseDetector  # noqa: E402
 
 # ── Structured logging ────────────────────────────────────────
 logging.basicConfig(
@@ -83,7 +84,7 @@ logging.getLogger("websockets.server").setLevel(logging.WARNING)
 
 # ── Config (all overridable via env vars) ─────────────────────────────────────
 WS_HOST        = os.getenv("WS_HOST",              "0.0.0.0")
-WS_PORT        = int(os.getenv("WS_PORT",          "8765"))
+WS_PORT        = int(os.getenv("WS_PORT",          "8766"))
 MP_COMPLEXITY  = int(os.getenv("MP_COMPLEXITY",    "1"))
 MP_DETECT_CONF = float(os.getenv("MP_DETECT_CONF", "0.5"))
 MP_TRACK_CONF  = float(os.getenv("MP_TRACK_CONF",  "0.5"))
@@ -112,6 +113,7 @@ class ClientSession:
     client_id: str
     websocket: ServerConnection
     detector: PoseDetector
+    logic: ExerciseDetector
     connected_at: float = field(default_factory=time.time)
     
     # Performance metrics
@@ -358,11 +360,27 @@ async def process_frame(
     # Record successful processing with both inference and e2e latency
     session.record_frame_processed(result.latency_ms, e2e_latency_ms)
     
-    # Build response with clean landmark data
+    if result.landmarks:
+        # Convert landmarks from list format to dict format expected by logic module
+        landmarks_dict = {lm['name'].lower() if isinstance(lm, dict) else lm.name.lower(): lm for lm in result.landmarks}
+        state = session.logic.update(landmarks_dict)
+    else:
+        # If no body is detected, reset logic to standing so it doesn't hallucinate reps
+        from logic.exercise_detector import ExerciseState, ExerciseStage, JointAngles
+        import time
+        session.logic.stage = ExerciseStage.STANDING
+        session.logic._was_down = False
+        state = None
+        
+    # Build response with full exercise metadata
     response = {
         "type":              "pose",
         "detected":          result.detected,
         "landmarks":         result.landmarks,
+        "landmarks_raw":     state.landmarks_raw if state else {},
+        "feedback_flags":    [{"code": f.code, "message": f.message, "severity": f.severity.value} for f in state.feedback_flags] if state else [],
+        "rep_count":         state.rep_count if state else 0,
+        "stage":             state.stage.value if state else "standing",
         "fps":               round(result.fps, 2),
         "latency_ms":        round(result.latency_ms, 2),      # Inference only
         "e2e_latency_ms":    round(e2e_latency_ms, 2),        # Full pipeline
@@ -496,11 +514,13 @@ async def handle_client(ws: ServerConnection) -> None:
         target_fps=TARGET_FPS,
         max_latency_ms=MAX_LATENCY_MS,
     )
+    logic = ExerciseDetector(exercise="squat")
     
     session = ClientSession(
         client_id=client_id,
         websocket=ws,
         detector=detector,
+        logic=logic,
     )
     _clients[client_id] = session
     
@@ -602,6 +622,7 @@ async def main() -> None:
         ping_interval=None,
         ping_timeout=None,
         close_timeout=10,
+        max_size=10485760, # 10MB
     ):
         logger.info("✅ Server ready — waiting for mobile frames …")
         logger.info(f"🔌 WSS URL      : wss://{cs}-{WS_PORT}.app.github.dev")
