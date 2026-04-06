@@ -11,57 +11,50 @@ PoseLandmarker = mp.tasks.vision.PoseLandmarker
 PoseLandmarkerOptions = mp.tasks.vision.PoseLandmarkerOptions
 RunningMode = mp.tasks.vision.RunningMode
 
+# MediaPipe Pose 33 landmarks using official PoseLandmark enum names
 LANDMARK_NAMES = [
-    "nose", "left_eye_inner", "left_eye", "left_eye_outer",
-    "right_eye_inner", "right_eye", "right_eye_outer",
-    "left_ear", "right_ear",
-    "mouth_left", "mouth_right",
-    "left_shoulder", "right_shoulder",
-    "left_elbow", "right_elbow",
-    "left_wrist", "right_wrist",
-    "left_pinky", "right_pinky",
-    "left_index", "right_index",
-    "left_thumb", "right_thumb",
-    "left_hip", "right_hip",
-    "left_knee", "right_knee",
-    "left_ankle", "right_ankle",
-    "left_heel", "right_heel",
-    "left_foot_index", "right_foot_index",
+    "NOSE",
+    "LEFT_EYE_INNER", "LEFT_EYE", "LEFT_EYE_OUTER",
+    "RIGHT_EYE_INNER", "RIGHT_EYE", "RIGHT_EYE_OUTER",
+    "LEFT_EAR", "RIGHT_EAR",
+    "MOUTH_LEFT", "MOUTH_RIGHT",
+    "LEFT_SHOULDER", "RIGHT_SHOULDER",
+    "LEFT_ELBOW", "RIGHT_ELBOW",
+    "LEFT_WRIST", "RIGHT_WRIST",
+    "LEFT_PINKY", "RIGHT_PINKY",
+    "LEFT_INDEX", "RIGHT_INDEX",
+    "LEFT_THUMB", "RIGHT_THUMB",
+    "LEFT_HIP", "RIGHT_HIP",
+    "LEFT_KNEE", "RIGHT_KNEE",
+    "LEFT_ANKLE", "RIGHT_ANKLE",
+    "LEFT_HEEL", "RIGHT_HEEL",
+    "LEFT_FOOT_INDEX", "RIGHT_FOOT_INDEX",
 ]
 
 class PoseDetectionResult(NamedTuple):
     detected: bool
     landmarks: Any
-    angles: Dict[str, float]
     fps: float
     latency_ms: float
     frame_idx: int
     error: str
-
-
-def _angle(a, b, c):
-    a = np.array([a["x"], a["y"]])
-    b = np.array([b["x"], b["y"]])
-    c = np.array([c["x"], c["y"]])
-    ba = a - b
-    bc = c - b
-    denom = np.linalg.norm(ba) * np.linalg.norm(bc)
-    if denom == 0:
-        return 0.0
-    cosine_angle = np.clip(np.dot(ba, bc) / denom, -1.0, 1.0)
-    return float(np.degrees(np.arccos(cosine_angle)))
+    dropped_frames: int
 
 
 def get_landmarks_from_result(detection_result, image_shape):
+    """Extract clean landmark data from MediaPipe result.
+    
+    Returns list of landmarks with MediaPipe PoseLandmark names.
+    No angle computation - pure landmark data only.
+    """
     if not detection_result.pose_landmarks:
-        return [], {}, {}
+        return []
 
     height, width = image_shape[:2]
     landmarks = []
-    landmark_dict = {}
 
     for idx, lmk in enumerate(detection_result.pose_landmarks[0]):
-        name = LANDMARK_NAMES[idx] if idx < len(LANDMARK_NAMES) else f"landmark_{idx}"
+        name = LANDMARK_NAMES[idx] if idx < len(LANDMARK_NAMES) else f"LANDMARK_{idx}"
         px, py = int(lmk.x * width), int(lmk.y * height)
         visibility = float(lmk.visibility) if lmk.visibility is not None else 0.0
         data = {
@@ -72,30 +65,25 @@ def get_landmarks_from_result(detection_result, image_shape):
             "visibility": visibility,
             "px": px,
             "py": py,
-            "visible": visibility > 0.98,
         }
         landmarks.append(data)
-        landmark_dict[name] = data
 
-    angles = {}
-    try:
-        angles["left_knee"] = _angle(landmark_dict["left_hip"], landmark_dict["left_knee"], landmark_dict["left_ankle"])
-        angles["right_knee"] = _angle(landmark_dict["right_hip"], landmark_dict["right_knee"], landmark_dict["right_ankle"])
-        angles["back"] = _angle(landmark_dict["left_shoulder"], landmark_dict["left_hip"], landmark_dict["left_knee"])
-        angles["left_elbow"] = _angle(landmark_dict["left_shoulder"], landmark_dict["left_elbow"], landmark_dict["left_wrist"])
-        angles["right_elbow"] = _angle(landmark_dict["right_shoulder"], landmark_dict["right_elbow"], landmark_dict["right_wrist"])
-    except Exception:
-        pass
-
-    return landmarks, landmark_dict, angles
+    return landmarks
 
 
 class PoseDetector:
+    """MediaPipe Pose detector with latency tracking and frame skip logic.
+    
+    Phase 2 architecture: Clean landmark extraction only.
+    No angle computation, no exercise logic.
+    """
+    
     def __init__(self,
                  model_complexity=1,
                  min_detection_conf=0.5,
                  min_tracking_conf=0.5,
-                 target_fps=15):
+                 target_fps=15,
+                 max_latency_ms=100):
         model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "pose_landmarker.task")
         if not os.path.exists(model_path):
             model_path = "pose_landmarker.task"
@@ -112,39 +100,49 @@ class PoseDetector:
         self._landmarker = PoseLandmarker.create_from_options(options)
         self.last_time = time.time()
         self.target_fps = target_fps
+        self.max_latency_ms = max_latency_ms
         self._frame_times = deque(maxlen=30)
+        self._latency_samples = deque(maxlen=100)  # For P95 calculation
         self._frame_idx = 0
+        self._dropped_frames = 0
 
     def close(self):
         self._landmarker.close()
 
     def detect(self, jpeg_bytes):
+        """Detect pose landmarks from JPEG frame with frame skip logic.
+        
+        Skips frames when latency > max_latency_ms to maintain real-time performance.
+        Returns clean landmark data only (no angles, no logic).
+        """
         npimg = np.frombuffer(jpeg_bytes, np.uint8)
         image = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
         if image is None:
             return PoseDetectionResult(
                 detected=False,
                 landmarks=[],
-                angles={},
                 fps=0.0,
                 latency_ms=0.0,
                 frame_idx=self._frame_idx,
-                error="frame_decode_error"
+                error="frame_decode_error",
+                dropped_frames=self._dropped_frames,
             )
 
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         now = time.time()
         elapsed = now - self.last_time
+        
+        # Throttle to target FPS
         if elapsed < 1.0 / self.target_fps:
             return PoseDetectionResult(
                 detected=False,
                 landmarks=[],
-                angles={},
-                fps=1.0 / (self._frame_times[-1] - self._frame_times[0]) if len(self._frame_times) > 1 else 0.0,
+                fps=self._calculate_fps(),
                 latency_ms=elapsed * 1000,
                 frame_idx=self._frame_idx,
-                error="throttled"
+                error="throttled",
+                dropped_frames=self._dropped_frames,
             )
 
         self.last_time = now
@@ -155,19 +153,58 @@ class PoseDetector:
         start = time.perf_counter()
         detection_result = self._landmarker.detect(mp_image)
         latency_ms = (time.perf_counter() - start) * 1000
+        
+        # Track latency for P95 calculation
+        self._latency_samples.append(latency_ms)
+        
+        # Frame skip logic: drop frame if latency exceeds threshold
+        if latency_ms > self.max_latency_ms:
+            self._dropped_frames += 1
+            return PoseDetectionResult(
+                detected=False,
+                landmarks=[],
+                fps=self._calculate_fps(),
+                latency_ms=latency_ms,
+                frame_idx=self._frame_idx,
+                error="latency_exceeded",
+                dropped_frames=self._dropped_frames,
+            )
 
         detected = bool(detection_result.pose_landmarks)
-        landmarks, landmark_dict, angles = get_landmarks_from_result(detection_result, image.shape)
+        landmarks = get_landmarks_from_result(detection_result, image.shape)
 
         self._frame_times.append(now)
-        fps = len(self._frame_times) / (self._frame_times[-1] - self._frame_times[0]) if len(self._frame_times) > 1 else 0.0
+        fps = self._calculate_fps()
 
         return PoseDetectionResult(
             detected=detected,
             landmarks=landmarks,
-            angles=angles,
             fps=fps,
             latency_ms=latency_ms,
             frame_idx=self._frame_idx,
-            error=""
+            error="",
+            dropped_frames=self._dropped_frames,
         )
+    
+    def _calculate_fps(self) -> float:
+        """Calculate current FPS from frame time samples."""
+        if len(self._frame_times) > 1:
+            return len(self._frame_times) / (self._frame_times[-1] - self._frame_times[0])
+        return 0.0
+    
+    def get_latency_stats(self) -> Dict[str, float]:
+        """Get latency statistics for monitoring.
+        
+        Returns:
+            dict with avg, min, max, p95 latency in milliseconds
+        """
+        if not self._latency_samples:
+            return {"avg": 0.0, "min": 0.0, "max": 0.0, "p95": 0.0}
+        
+        samples = sorted(self._latency_samples)
+        return {
+            "avg": sum(samples) / len(samples),
+            "min": samples[0],
+            "max": samples[-1],
+            "p95": samples[int(len(samples) * 0.95)] if len(samples) > 0 else 0.0,
+        }
