@@ -27,3 +27,8 @@ logs/
 # Secrets
 .env
 *.env
+venv311/
+.venv/
+venv/
+__pycache__/
+*.pyc
