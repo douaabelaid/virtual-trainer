@@ -1,4 +1,4 @@
-import io
+import os
 import cv2
 import numpy as np
 import mediapipe as mp
@@ -6,7 +6,28 @@ import time
 from collections import deque
 from typing import Any, Dict, NamedTuple
 
-mp_pose = mp.solutions.pose
+BaseOptions = mp.tasks.BaseOptions
+PoseLandmarker = mp.tasks.vision.PoseLandmarker
+PoseLandmarkerOptions = mp.tasks.vision.PoseLandmarkerOptions
+RunningMode = mp.tasks.vision.RunningMode
+
+LANDMARK_NAMES = [
+    "nose", "left_eye_inner", "left_eye", "left_eye_outer",
+    "right_eye_inner", "right_eye", "right_eye_outer",
+    "left_ear", "right_ear",
+    "mouth_left", "mouth_right",
+    "left_shoulder", "right_shoulder",
+    "left_elbow", "right_elbow",
+    "left_wrist", "right_wrist",
+    "left_pinky", "right_pinky",
+    "left_index", "right_index",
+    "left_thumb", "right_thumb",
+    "left_hip", "right_hip",
+    "left_knee", "right_knee",
+    "left_ankle", "right_ankle",
+    "left_heel", "right_heel",
+    "left_foot_index", "right_foot_index",
+]
 
 class PoseDetectionResult(NamedTuple):
     detected: bool
@@ -17,51 +38,57 @@ class PoseDetectionResult(NamedTuple):
     frame_idx: int
     error: str
 
-def get_landmarks_from_result(results, image_shape):
-    if not results.pose_landmarks:
+
+def _angle(a, b, c):
+    a = np.array([a["x"], a["y"]])
+    b = np.array([b["x"], b["y"]])
+    c = np.array([c["x"], c["y"]])
+    ba = a - b
+    bc = c - b
+    denom = np.linalg.norm(ba) * np.linalg.norm(bc)
+    if denom == 0:
+        return 0.0
+    cosine_angle = np.clip(np.dot(ba, bc) / denom, -1.0, 1.0)
+    return float(np.degrees(np.arccos(cosine_angle)))
+
+
+def get_landmarks_from_result(detection_result, image_shape):
+    if not detection_result.pose_landmarks:
         return [], {}, {}
 
     height, width = image_shape[:2]
     landmarks = []
     landmark_dict = {}
-    for idx, lmk in enumerate(results.pose_landmarks.landmark):
-        name = mp_pose.PoseLandmark(idx).name.lower()
+
+    for idx, lmk in enumerate(detection_result.pose_landmarks[0]):
+        name = LANDMARK_NAMES[idx] if idx < len(LANDMARK_NAMES) else f"landmark_{idx}"
         px, py = int(lmk.x * width), int(lmk.y * height)
+        visibility = float(lmk.visibility) if lmk.visibility is not None else 0.0
         data = {
             "name": name,
             "x": float(lmk.x),
             "y": float(lmk.y),
             "z": float(lmk.z),
-            "visibility": float(lmk.visibility),
+            "visibility": visibility,
             "px": px,
             "py": py,
-            "visible": lmk.visibility > 0.98,
+            "visible": visibility > 0.98,
         }
         landmarks.append(data)
         landmark_dict[name] = data
 
-    # Example angle calculation, real implementations should be more robust
-    def angle(a, b, c):
-        a = np.array([a["x"], a["y"]])
-        b = np.array([b["x"], b["y"]])
-        c = np.array([c["x"], c["y"]])
-        ba = a - b
-        bc = c - b
-        cosine_angle = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc))
-        angle = np.arccos(cosine_angle)
-        return np.degrees(angle)
-
     angles = {}
     try:
-        angles["left_knee"] = angle(landmark_dict["left_hip"], landmark_dict["left_knee"], landmark_dict["left_ankle"])
-        angles["right_knee"] = angle(landmark_dict["right_hip"], landmark_dict["right_knee"], landmark_dict["right_ankle"])
-        angles["back"] = angle(landmark_dict["left_shoulder"], landmark_dict["left_hip"], landmark_dict["left_knee"])
-        angles["left_elbow"] = angle(landmark_dict["left_shoulder"], landmark_dict["left_elbow"], landmark_dict["left_wrist"])
-        angles["right_elbow"] = angle(landmark_dict["right_shoulder"], landmark_dict["right_elbow"], landmark_dict["right_wrist"])
+        angles["left_knee"] = _angle(landmark_dict["left_hip"], landmark_dict["left_knee"], landmark_dict["left_ankle"])
+        angles["right_knee"] = _angle(landmark_dict["right_hip"], landmark_dict["right_knee"], landmark_dict["right_ankle"])
+        angles["back"] = _angle(landmark_dict["left_shoulder"], landmark_dict["left_hip"], landmark_dict["left_knee"])
+        angles["left_elbow"] = _angle(landmark_dict["left_shoulder"], landmark_dict["left_elbow"], landmark_dict["left_wrist"])
+        angles["right_elbow"] = _angle(landmark_dict["right_shoulder"], landmark_dict["right_elbow"], landmark_dict["right_wrist"])
     except Exception:
         pass
 
     return landmarks, landmark_dict, angles
+
 
 class PoseDetector:
     def __init__(self,
@@ -69,21 +96,29 @@ class PoseDetector:
                  min_detection_conf=0.5,
                  min_tracking_conf=0.5,
                  target_fps=15):
-        self.pose = mp_pose.Pose(
-            model_complexity=model_complexity,
-            min_detection_confidence=min_detection_conf,
+        model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "pose_landmarker.task")
+        if not os.path.exists(model_path):
+            model_path = "pose_landmarker.task"
+
+        options = PoseLandmarkerOptions(
+            base_options=BaseOptions(model_asset_path=model_path),
+            running_mode=RunningMode.IMAGE,
+            num_poses=1,
+            min_pose_detection_confidence=min_detection_conf,
+            min_pose_presence_confidence=min_detection_conf,
             min_tracking_confidence=min_tracking_conf,
-            enable_segmentation=False)
+            output_segmentation_masks=False,
+        )
+        self._landmarker = PoseLandmarker.create_from_options(options)
         self.last_time = time.time()
         self.target_fps = target_fps
         self._frame_times = deque(maxlen=30)
         self._frame_idx = 0
 
     def close(self):
-        self.pose.close()
+        self._landmarker.close()
 
     def detect(self, jpeg_bytes):
-        t0 = time.time()
         npimg = np.frombuffer(jpeg_bytes, np.uint8)
         image = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
         if image is None:
@@ -99,7 +134,6 @@ class PoseDetector:
 
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-        # Throttle input to not overload CPU
         now = time.time()
         elapsed = now - self.last_time
         if elapsed < 1.0 / self.target_fps:
@@ -116,12 +150,14 @@ class PoseDetector:
         self.last_time = now
         self._frame_idx += 1
 
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=image_rgb)
+
         start = time.perf_counter()
-        results = self.pose.process(image_rgb)
+        detection_result = self._landmarker.detect(mp_image)
         latency_ms = (time.perf_counter() - start) * 1000
 
-        detected = results.pose_landmarks is not None
-        landmarks, landmark_dict, angles = get_landmarks_from_result(results, image.shape)
+        detected = bool(detection_result.pose_landmarks)
+        landmarks, landmark_dict, angles = get_landmarks_from_result(detection_result, image.shape)
 
         self._frame_times.append(now)
         fps = len(self._frame_times) / (self._frame_times[-1] - self._frame_times[0]) if len(self._frame_times) > 1 else 0.0
