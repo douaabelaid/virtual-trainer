@@ -1,7 +1,7 @@
 """
 ws_server.py
 WebSocket server — accepts base64 JPEG frames from a mobile app,
-runs MediaPipe Pose via PoseDetector, streams back landmark JSON.
+runs MediaPipe Pose via PoseDetector, streams back landmark JSON + audio coaching.
 
 ──────────────────────────────────────────────────────────────
 Mobile → Server (JSON)
@@ -19,23 +19,25 @@ Server → Mobile (JSON)
 ──────────────────────────────────────────────────────────────
 { "type":      "pose",
   "detected":  true,
-  "landmarks": [
-      { "name":"left_knee",
-        "x":0.45, "y":0.71, "z":-0.10,
-        "visibility":0.998,
-        "px":288,  "py":341,
-        "visible":true }, ... ],
-  "angles":    { "left_knee":92.3, "avg_knee":91.7, ... },
+  "landmarks": [...],
+  "angles":    { "left_knee":92.3, ... },
   "fps":       14.9,
   "latency_ms":17.4,
   "frame_idx":  38,
-  "exercise":  "squat"  }
+  "exercise":  "squat",
+  "rep_count":  4,
+  "stage":     "down"  }
+
+{ "type": "audio", "format": "wav",
+  "code": "KNEE_CAVE", "severity": "warning",
+  "text": "...", "exercise": "squat" }
+<binary WAV frame>
 
 { "type": "pong"                            }
 { "type": "exercise_set", "exercise":"..." }
 { "type": "reset_ok",     "rep_count": 0   }
 { "type": "error",        "message":  "..." }
-──────────────────────────────────────────────────────────────
+────────────���─────────────────────────────────────────────────
 """
 
 import asyncio
@@ -43,25 +45,43 @@ import base64
 import json
 import logging
 import os
+import sys
 import time
 from http import HTTPStatus
+from pathlib import Path
 
 import websockets
 from websockets.asyncio.server import ServerConnection, serve
 
-from pose_detector import PoseDetector
+# ── Path setup (so edge/ can import logic/ and voice/) ───────────────────────
+_ROOT = Path(__file__).resolve().parent.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
 
-# ── Logging ───────────────────────────────────────────────────────────────
+from pose_detector import PoseDetector  # noqa: E402  (local import)
+
+# ── Exercise logic ────────────────────────────────────────────────────────────
+try:
+    from logic.exercise_detector import ExerciseDetector
+    from logic.feedback_mapper import map_flags_to_coaching
+    _LOGIC_AVAILABLE = True
+except ImportError as _e:
+    _LOGIC_AVAILABLE = False
+    logging.getLogger("ws_server").warning(f"logic layer not available: {_e}")
+
+# ── Voice layer (optional) ────────────────────────────────────────────────────
+_VOICE_ENABLED = os.getenv("VOICE_ENABLED", "1") not in ("0", "false", "False")
+_audio_streamer = None   # initialised in main() if voice is enabled
+
+# ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
 )
 logger = logging.getLogger("ws_server")
-
-# Silence noisy Codespaces health-check rejection logs
 logging.getLogger("websockets.server").setLevel(logging.CRITICAL)
 
-# ── Config (all overridable via env vars) ─────────────────────────────────
+# ── Config (all overridable via env vars) ─────────────────────────────────────
 WS_HOST        = os.getenv("WS_HOST",              "0.0.0.0")
 WS_PORT        = int(os.getenv("WS_PORT",          "8765"))
 MP_COMPLEXITY  = int(os.getenv("MP_COMPLEXITY",    "1"))
@@ -69,23 +89,24 @@ MP_DETECT_CONF = float(os.getenv("MP_DETECT_CONF", "0.5"))
 MP_TRACK_CONF  = float(os.getenv("MP_TRACK_CONF",  "0.5"))
 TARGET_FPS     = int(os.getenv("TARGET_FPS",       "15"))
 
-# ── Server state ──────────────────────────────────────────────────────────
+# ── Server state ──────────────────────────────────────────────────────────────
 _clients: set[ServerConnection] = set()
 _start_time = time.time()
 
 
-# ── HTTP handler: answers Codespaces health-check probes ──────────────────
+# ── HTTP handler: answers Codespaces health-check probes ─────────────────────
+
 async def _process_request(connection: ServerConnection, request) -> None:
-    """Return HTTP 200 for plain HTTP probes; None for real WS upgrades."""
     if request.headers.get("Upgrade", "").lower() == "websocket":
         return None
 
     body = json.dumps({
-        "status":     "ok",
-        "service":    "virtual-trainer-pose-backend",
-        "clients":    len(_clients),
-        "uptime_s":   int(time.time() - _start_time),
-        "target_fps": TARGET_FPS,
+        "status":        "ok",
+        "service":       "virtual-trainer-pose-backend",
+        "clients":       len(_clients),
+        "uptime_s":      int(time.time() - _start_time),
+        "target_fps":    TARGET_FPS,
+        "voice_enabled": _audio_streamer is not None,
     }).encode()
 
     return connection.respond(
@@ -99,22 +120,26 @@ async def _process_request(connection: ServerConnection, request) -> None:
     )
 
 
-# ── Per-client session ────────────────────────────────────────────────────
+# ── Per-client session ────────────────────────────────────────────────────────
+
 async def handle_client(ws: ServerConnection) -> None:
     client_ip        = ws.remote_address[0]
     current_exercise = "squat"
 
-    logger.info(f"📱 Connected    : {client_ip}  "
-                f"(active clients: {len(_clients) + 1})")
+    logger.info(f"📱 Connected    : {client_ip}  (active clients: {len(_clients) + 1})")
     _clients.add(ws)
 
-    # One PoseDetector per client — fully isolated
+    # One PoseDetector per client
     detector = PoseDetector(
         model_complexity=MP_COMPLEXITY,
         min_detection_conf=MP_DETECT_CONF,
         min_tracking_conf=MP_TRACK_CONF,
         target_fps=TARGET_FPS,
     )
+
+    # One ExerciseDetector per client (if logic layer available)
+    logic_detector = ExerciseDetector(exercise=current_exercise) if _LOGIC_AVAILABLE else None
+
     loop = asyncio.get_event_loop()
 
     async def send(payload: dict) -> None:
@@ -126,7 +151,6 @@ async def handle_client(ws: ServerConnection) -> None:
     try:
         async for raw in ws:
 
-            # ── Parse JSON ────────────────────────────────────────────────
             try:
                 msg = json.loads(raw)
             except json.JSONDecodeError as exc:
@@ -135,52 +159,54 @@ async def handle_client(ws: ServerConnection) -> None:
 
             msg_type = msg.get("type", "")
 
-            # ── ping ─────────────────────────────────────────────────────
+            # ── ping ──────────────────────────────────────────────────────────
             if msg_type == "ping":
                 await send({"type": "pong"})
 
-            # ── set_exercise ─────────────────────────────────────────────
+            # ── set_exercise ──────────────────────────────────────────────────
             elif msg_type == "set_exercise":
                 current_exercise = msg.get("exercise", current_exercise)
+                if logic_detector and _LOGIC_AVAILABLE:
+                    logic_detector = ExerciseDetector(exercise=current_exercise)
                 logger.info(f"🏋️  {client_ip} → exercise: {current_exercise}")
-                await send({"type": "exercise_set",
-                            "exercise": current_exercise})
+                await send({"type": "exercise_set", "exercise": current_exercise})
 
-            # ── reset ───────────────────────────────────────────────────
+            # ── reset ─────────────────────────────────────────────────────────
             elif msg_type == "reset":
                 current_exercise = msg.get("exercise", current_exercise)
+                if logic_detector:
+                    logic_detector.reset()
+                if _audio_streamer:
+                    _audio_streamer.reset_cooldowns()
                 await send({"type": "reset_ok", "rep_count": 0})
 
-            # ── frame  ← main path ──────────────────────────────────────
+            # ── frame  ← main path ────────────────────────────────────────────
             elif msg_type == "frame":
-                # Allow exercise to be set inline with the frame
                 if "exercise" in msg:
-                    current_exercise = msg["exercise"]
+                    new_ex = msg["exercise"]
+                    if new_ex != current_exercise:
+                        current_exercise = new_ex
+                        if _LOGIC_AVAILABLE:
+                            logic_detector = ExerciseDetector(exercise=current_exercise)
 
                 b64 = msg.get("data", "")
                 if not b64:
-                    await send({"type": "error",
-                                "message": "Missing 'data' field"})
+                    await send({"type": "error", "message": "Missing 'data' field"})
                     continue
 
-                # Decode base64 → raw JPEG bytes
                 try:
                     jpeg_bytes = base64.b64decode(b64)
                 except Exception as exc:
-                    await send({"type": "error",
-                                "message": f"base64 error: {exc}"})
+                    await send({"type": "error", "message": f"base64 error: {exc}"})
                     continue
 
-                # Run MediaPipe in a thread so asyncio loop stays responsive
-                result = await loop.run_in_executor(
-                    None, detector.detect, jpeg_bytes
-                )
+                # Run MediaPipe in thread
+                result = await loop.run_in_executor(None, detector.detect, jpeg_bytes)
 
-                # Silently drop throttled frames (mobile sent too fast)
                 if result.error == "throttled":
                     continue
 
-                # Build and send pose response
+                # ── Build pose response ───────────────────────────────────────
                 response: dict = {
                     "type":       "pose",
                     "detected":   result.detected,
@@ -194,12 +220,34 @@ async def handle_client(ws: ServerConnection) -> None:
                 if result.error:
                     response["error"] = result.error
 
+                # ── Run exercise logic ────────────────────────────────────────
+                feedback_flags = []
+                if logic_detector and result.detected and result.landmarks:
+                    try:
+                        # Convert landmark list → dict for ExerciseDetector
+                        landmarks_dict = {
+                            lm["name"]: {"x": lm["x"], "y": lm["y"]}
+                            for lm in result.landmarks
+                            if lm.get("visible", True)
+                        }
+                        state = logic_detector.update(landmarks_dict)
+                        feedback_flags = state.feedback_flags
+                        response["rep_count"] = state.rep_count
+                        response["stage"]     = state.stage.value
+                    except Exception as exc:
+                        logger.warning(f"Exercise logic error: {exc}")
+
                 await send(response)
 
-            # ── unknown ────────────────────────────────────────────────
+                # ── Stream voice coaching (fire-and-forget) ───────────────────
+                if _audio_streamer and feedback_flags:
+                    asyncio.create_task(
+                        _audio_streamer.stream_coaching(ws, feedback_flags, current_exercise)
+                    )
+
+            # ── unknown ───────────────────────────────────────────────────────
             else:
-                await send({"type": "error",
-                            "message": f"Unknown type: {msg_type!r}"})
+                await send({"type": "error", "message": f"Unknown type: {msg_type!r}"})
 
     except websockets.exceptions.ConnectionClosedOK:
         logger.info(f"📴 Disconnected : {client_ip}")
@@ -210,16 +258,41 @@ async def handle_client(ws: ServerConnection) -> None:
     finally:
         _clients.discard(ws)
         detector.close()
-        logger.info(f"🧹 Cleaned up   : {client_ip}  "
-                    f"(active clients: {len(_clients)})")
+        logger.info(f"🧹 Cleaned up   : {client_ip}  (active clients: {len(_clients)})")
 
 
-# ── Entry point ───────────────────────────────────────────────────────────
+# ── Entry point ───────────────────────────────────────────────────────────────
+
 async def main() -> None:
+    global _audio_streamer
+
     cs = os.getenv("CODESPACE_NAME", "<codespace>")
     logger.info(f"🚀 Starting pose backend  ws://{WS_HOST}:{WS_PORT}")
     logger.info(f"   MP complexity : {MP_COMPLEXITY}")
     logger.info(f"   Target FPS    : {TARGET_FPS}")
+
+    # ── Initialise voice layer ────────────────────────────────────────────────
+    if _VOICE_ENABLED:
+        try:
+            from voice.tts_client    import TTSClient
+            from voice.audio_streamer import AudioStreamer
+            from voice.phrase_library import ALL_PHRASES
+
+            tts_client = TTSClient()
+            if tts_client.ready:
+                # Pre-load phrases in a thread so server starts immediately
+                loop = asyncio.get_event_loop()
+                await loop.run_in_executor(None, tts_client.preload_phrases, ALL_PHRASES)
+                _audio_streamer = AudioStreamer(tts_client, cooldown_s=2.0)
+                logger.info("🎙️  Voice coaching: ENABLED (Coqui TTS)")
+            else:
+                logger.warning("🔇 TTS model not ready — voice coaching disabled.")
+        except ImportError as exc:
+            logger.warning(f"🔇 Voice layer import failed ({exc}) — voice coaching disabled.")
+        except Exception as exc:
+            logger.error(f"🔇 Voice init error: {exc} — voice coaching disabled.")
+    else:
+        logger.info("🔇 Voice coaching: DISABLED (VOICE_ENABLED=0)")
 
     async with serve(
         handle_client,
