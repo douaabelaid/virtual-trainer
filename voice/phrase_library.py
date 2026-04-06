@@ -53,4 +53,31 @@ ALL_PHRASES: dict[str, str] = {
     "SESSION_START":        "Let's get started. Focus on your form.",
     "SESSION_END":          "Great session. Rest up and recover well.",
     "WARMUP_DONE":          "Warm-up complete. Time to work.",
+
+    # ── ADDITIONAL CORRECTIONS ─────────────────────────────────────────
+    "HEELS_DOWN_0":         "Keep your heels planted firmly on the floor.",
+    "HEELS_DOWN_1":         "Don't lift your heels, drive through your midfoot.",
+    "BREATHING_SQUAT":      "Inhale on the way down, exhale as you push up.",
+    "CORE_SAG_0":           "Don't let your hips sag, keep your core tight.",
+    "CORE_SAG_1":           "Squeeze your glutes to keep your body in a straight line.",
+    "NECK_NEUTRAL_0":       "Look slightly ahead, keep your neck neutral.",
+    "BREATHING_PUSHUP":     "Breathe in as you lower, breathe out as you push up.",
+    "LUNGE_DEPTH_0":        "Lower your back knee until it almost touches the floor.",
+    "LUNGE_DEPTH_1":        "Go a bit deeper on that lunge to get the full stretch.",
+    "LUNGE_BALANCE_0":      "Keep your core braced and chest up for better balance.",
+
+    # ── PACING & MOTIVATION ──────────────────────────────────────────
+    "PACE_FAST_0":          "Slow down, control the eccentric movement.",
+    "PACE_FAST_1":          "Don't rush, focus on the muscle contraction.",
+    "PACE_SLOW_0":          "Good control, now drive up a little bit faster.",
+    "MOTIVATION_0":         "Push through the burn, you got this!",
+    "MOTIVATION_1":         "Stay strong, finish the set.",
+    "MOTIVATION_2":         "Almost there, give it your absolute all.",
+
+    # ── ADDITIONAL MILESTONES ────────────────────────────────────────
+    "REP_2":                "Two reps down.",
+    "REP_3":                "Three. Keep the rhythm.",
+    "REP_4":                "Four. Good control.",
+    "REP_15":               "Fifteen reps. Incredible work!",
+    "REP_20":               "Twenty reps! Amazing endurance.",
 }
