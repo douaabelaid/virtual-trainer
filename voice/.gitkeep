@@ -1,0 +1,5 @@
+git fetch origin
+git pull origin main
+# If you want to pull only commits from NadaBenFarhat:
+# git log --author="NadaBenFarhat"
+# (Review the commits, then cherry-pick as needed)

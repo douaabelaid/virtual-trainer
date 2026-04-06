@@ -82,8 +82,11 @@ logger = logging.getLogger("ws_server")
 logging.getLogger("websockets.server").setLevel(logging.CRITICAL)
 
 # ── Config (all overridable via env vars) ─────────────────────────────────────
-WS_HOST        = os.getenv("WS_HOST",              "0.0.0.0")
-WS_PORT        = int(os.getenv("WS_PORT",          "8765"))
+# Force this in your Python code:
+WS_HOST = "0.0.0.0" 
+WS_PORT = 8765
+# WS_HOST        = os.getenv("WS_HOST",              "0.0.0.0")
+# WS_PORT        = int(os.getenv("WS_PORT",          "8765"))
 MP_COMPLEXITY  = int(os.getenv("MP_COMPLEXITY",    "1"))
 MP_DETECT_CONF = float(os.getenv("MP_DETECT_CONF", "0.5"))
 MP_TRACK_CONF  = float(os.getenv("MP_TRACK_CONF",  "0.5"))
@@ -266,7 +269,7 @@ async def handle_client(ws: ServerConnection) -> None:
 async def main() -> None:
     global _audio_streamer
 
-    cs = os.getenv("CODESPACE_NAME", "<codespace>")
+    # cs = os.getenv("CODESPACE_NAME", "<codespace>")
     logger.info(f"🚀 Starting pose backend  ws://{WS_HOST}:{WS_PORT}")
     logger.info(f"   MP complexity : {MP_COMPLEXITY}")
     logger.info(f"   Target FPS    : {TARGET_FPS}")
@@ -299,10 +302,13 @@ async def main() -> None:
         WS_HOST,
         WS_PORT,
         process_request=_process_request,
+        ping_interval=None,
+        ping_timeout=None,
+        close_timeout=10,
     ):
         logger.info("✅ Server ready — waiting for mobile frames …")
-        logger.info(f"🔌 WSS URL      : wss://{cs}-{WS_PORT}.app.github.dev")
-        logger.info(f"📡 Health-check : https://{cs}-{WS_PORT}.app.github.dev")
+        # logger.info(f"🔌 WSS URL      : wss://{cs}-{WS_PORT}.app.github.dev")
+        # logger.info(f"📡 Health-check : https://{cs}-{WS_PORT}.app.github.dev")
         await asyncio.Future()
 
 

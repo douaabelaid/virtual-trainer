@@ -13,13 +13,13 @@ import os
 
 import cv2
 import mediapipe as mp
-<<<<<<< HEAD
-from mediapipe.tasks import python as mp_tasks
-from mediapipe.tasks.python import vision as mp_vision
-=======
+
+
+
+
 from mediapipe.tasks import python as _mp_tasks
 from mediapipe.tasks.python import vision as _mp_vision
->>>>>>> ad996c9d282af456d1298d40c8d3b7d769c6bdf4
+
 import numpy as np
 
 _TASK_MODEL = os.path.join(os.path.dirname(__file__), "..", "pose_landmarker.task")
