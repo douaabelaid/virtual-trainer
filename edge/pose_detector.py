@@ -9,11 +9,20 @@ import time
 from dataclasses import dataclass, field
 from typing import Optional
 
+import os
+
 import cv2
 import mediapipe as mp
+<<<<<<< HEAD
 from mediapipe.tasks import python as mp_tasks
 from mediapipe.tasks.python import vision as mp_vision
+=======
+from mediapipe.tasks import python as _mp_tasks
+from mediapipe.tasks.python import vision as _mp_vision
+>>>>>>> ad996c9d282af456d1298d40c8d3b7d769c6bdf4
 import numpy as np
+
+_TASK_MODEL = os.path.join(os.path.dirname(__file__), "..", "pose_landmarker.task")
 
 logger = logging.getLogger("pose_detector")
 
@@ -90,18 +99,29 @@ class PoseDetector:
         self._frame_idx       = 0
         self._last_t          = 0.0
 
+<<<<<<< HEAD
         _model_path = os.path.join(os.path.dirname(__file__), "..", "pose_landmarker.task")
         _base_opts  = mp_tasks.BaseOptions(model_asset_path=_model_path)
         _options    = mp_vision.PoseLandmarkerOptions(
             base_options=_base_opts,
             running_mode=mp_vision.RunningMode.IMAGE,
+=======
+        base_options = _mp_tasks.BaseOptions(model_asset_path=_TASK_MODEL)
+        options = _mp_vision.PoseLandmarkerOptions(
+            base_options=base_options,
+            running_mode=_mp_vision.RunningMode.IMAGE,
+>>>>>>> ad996c9d282af456d1298d40c8d3b7d769c6bdf4
             num_poses=1,
             min_pose_detection_confidence=min_detection_conf,
             min_pose_presence_confidence=min_detection_conf,
             min_tracking_confidence=min_tracking_conf,
             output_segmentation_masks=False,
         )
+<<<<<<< HEAD
         self._pose = mp_vision.PoseLandmarker.create_from_options(_options)
+=======
+        self._pose = _mp_vision.PoseLandmarker.create_from_options(options)
+>>>>>>> ad996c9d282af456d1298d40c8d3b7d769c6bdf4
         logger.info(
             f"✅ PoseDetector ready  "
             f"(complexity={model_complexity}, target={target_fps} FPS)"
@@ -110,7 +130,7 @@ class PoseDetector:
     # ── Lifecycle ─────────────────────────────────────────────────────────────
 
     def close(self) -> None:
-        if self._pose:
+        if self._pose is not None:
             self._pose.close()
             self._pose = None
             logger.info("🔒 PoseDetector closed")

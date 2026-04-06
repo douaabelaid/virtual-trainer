@@ -33,7 +33,7 @@ logger = logging.getLogger("send_frames")
 
 
 async def stream(uri: str, exercise: str, fps: int, show: bool) -> None:
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
     if not cap.isOpened():
         logger.error("Cannot open camera (index 0). Check your webcam connection.")
         return
@@ -179,6 +179,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     scheme = "wss" if args.ssl else "ws"
-    URI = f"{scheme}://{args.host}:{args.port}"
+    URI = f"{scheme}://{args.host}:{args.port}/ws"
 
     asyncio.run(stream(URI, args.exercise, args.fps, args.show))
