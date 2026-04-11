@@ -4,18 +4,45 @@ Decodes JPEG frames, runs MediaPipe Pose, returns landmarks + joint angles.
 """
 
 import logging
+import os
 import time
 from dataclasses import dataclass, field
 from typing import Optional
 
+import os
+
 import cv2
 import mediapipe as mp
+
+
+
+
+from mediapipe.tasks import python as _mp_tasks
+from mediapipe.tasks.python import vision as _mp_vision
+
 import numpy as np
+
+_TASK_MODEL = os.path.join(os.path.dirname(__file__), "..", "pose_landmarker.task")
 
 logger = logging.getLogger("pose_detector")
 
-# ── 33 MediaPipe landmark names (derived from PoseLandmark enum) ─────────────
-LANDMARK_NAMES = [lm.name.lower() for lm in mp.solutions.pose.PoseLandmark]  # type: ignore[attr-defined]
+# ── 33 MediaPipe landmark names ───────────────────────────────────────────────
+LANDMARK_NAMES = [
+    "nose", "left_eye_inner", "left_eye", "left_eye_outer",
+    "right_eye_inner", "right_eye", "right_eye_outer",
+    "left_ear", "right_ear", "mouth_left", "mouth_right",
+    "left_shoulder", "right_shoulder",
+    "left_elbow", "right_elbow",
+    "left_wrist", "right_wrist",
+    "left_pinky", "right_pinky",
+    "left_index", "right_index",
+    "left_thumb", "right_thumb",
+    "left_hip", "right_hip",
+    "left_knee", "right_knee",
+    "left_ankle", "right_ankle",
+    "left_heel", "right_heel",
+    "left_foot_index", "right_foot_index",
+]
 
 # ── Joint angle triplets (vertex is the middle landmark) ─────────────────────
 ANGLE_TRIPLETS: dict[str, tuple[str, str, str]] = {
@@ -63,7 +90,7 @@ class PoseDetector:
         min_detection_conf: float = 0.5,
         min_tracking_conf:  float = 0.5,
         target_fps:         int   = TARGET_FPS,
-        min_visibility:     float = 0.3,
+        min_visibility:     float = 0.5,
     ) -> None:
         self._min_visibility  = min_visibility
         self._frame_interval  = 1.0 / target_fps
@@ -72,13 +99,18 @@ class PoseDetector:
         self._frame_idx       = 0
         self._last_t          = 0.0
 
-        self._pose = mp.solutions.pose.Pose(  # type: ignore[attr-defined]
-            model_complexity=model_complexity,
-            smooth_landmarks=True,
-            enable_segmentation=False,
-            min_detection_confidence=min_detection_conf,
+        _model_path = os.path.join(os.path.dirname(__file__), "..", "pose_landmarker.task")
+        _base_opts  = mp_tasks.BaseOptions(model_asset_path=_model_path)
+        _options    = mp_vision.PoseLandmarkerOptions(
+            base_options=_base_opts,
+            running_mode=mp_vision.RunningMode.IMAGE,
+            num_poses=1,
+            min_pose_detection_confidence=min_detection_conf,
+            min_pose_presence_confidence=min_detection_conf,
             min_tracking_confidence=min_tracking_conf,
+            output_segmentation_masks=False,
         )
+        self._pose = mp_vision.PoseLandmarker.create_from_options(_options)
         logger.info(
             f"✅ PoseDetector ready  "
             f"(complexity={model_complexity}, target={target_fps} FPS)"
@@ -87,27 +119,13 @@ class PoseDetector:
     # ── Lifecycle ─────────────────────────────────────────────────────────────
 
     def close(self) -> None:
-        if self._pose:
+        if self._pose is not None:
             self._pose.close()
             self._pose = None
             logger.info("🔒 PoseDetector closed")
 
     def __enter__(self):  return self
     def __exit__(self, *_): self.close()
-
-    # ── Warm-start ────────────────────────────────────────���───────────────────
-
-    def warmup(self) -> float:
-        """Run one dummy inference to pre-load model weights.
-
-        Returns the cold-start latency in milliseconds.
-        """
-        dummy = np.zeros((480, 640, 3), dtype=np.uint8)
-        _, buf = cv2.imencode(".jpg", dummy)
-        t0 = time.perf_counter()
-        self.detect(bytes(buf))
-        return (time.perf_counter() - t0) * 1000
-
 
     # ── Main API ──────────────────────────────────────────────────────────────
 
@@ -205,10 +223,10 @@ class PoseDetector:
 
         # ── MediaPipe inference ───────────────────────────────────────────────
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        rgb.flags.writeable = False
 
         try:
-            results = self._pose.process(rgb)  # type: ignore[union-attr]
+            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+            results  = self._pose.detect(mp_image)
         except Exception as exc:
             logger.error(f"MediaPipe error: {exc}", exc_info=True)
             return PoseResult(
@@ -240,7 +258,7 @@ class PoseDetector:
         lm_list = []
         lm_map: dict[str, dict] = {}
 
-        for i, lm in enumerate(results.pose_landmarks.landmark):
+        for i, lm in enumerate(results.pose_landmarks[0]):
             name    = LANDMARK_NAMES[i] if i < len(LANDMARK_NAMES) else f"lm_{i}"
             visible = lm.visibility >= self._min_visibility
             entry   = {
@@ -281,6 +299,19 @@ class PoseDetector:
 
 # ── Geometry ──────────────────────────────────────────────────────────────────
 
+def _vec2d(a: dict, b: dict) -> np.ndarray:
+    """Vector from b → a using normalised x, y."""
+    return np.array([a["x"] - b["x"], a["y"] - b["y"]], dtype=np.float32)
+
+
+def _angle_deg(v1: np.ndarray, v2: np.ndarray) -> float:
+    n1, n2 = np.linalg.norm(v1), np.linalg.norm(v2)
+    if n1 < 1e-6 or n2 < 1e-6:
+        return 0.0
+    cos_a = np.clip(np.dot(v1, v2) / (n1 * n2), -1.0, 1.0)
+    return round(float(np.degrees(np.arccos(cos_a))), 1)
+
+
 def _compute_angles(lm_map: dict) -> dict:
     angles: dict[str, float] = {}
 
@@ -292,17 +323,7 @@ def _compute_angles(lm_map: dict) -> dict:
             continue
         if not (a["visible"] and b["visible"] and c["visible"]):
             continue
-        # arctan2 method — consistent with logic/angle_utils.py, works in
-        # MediaPipe's downward-Y screen coordinate system
-        ang = abs(
-            np.degrees(
-                np.arctan2(c["y"] - b["y"], c["x"] - b["x"]) -
-                np.arctan2(a["y"] - b["y"], a["x"] - b["x"])
-            )
-        )
-        if ang > 180.0:
-            ang = 360.0 - ang
-        angles[joint] = round(ang, 1)
+        angles[joint] = _angle_deg(_vec2d(a, b), _vec2d(c, b))
 
     # Symmetric averages for convenience (avg_knee, avg_hip, etc.)
     for part in ("knee", "hip", "elbow", "shoulder"):
@@ -329,9 +350,9 @@ if __name__ == "__main__":
         format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
     )
 
-    mp_drawing       = mp.solutions.drawing_utils   # type: ignore[attr-defined]
-    mp_drawing_styles = mp.solutions.drawing_styles  # type: ignore[attr-defined]
-    mp_pose          = mp.solutions.pose              # type: ignore[attr-defined]
+    mp_drawing       = mp.solutions.drawing_utils
+    mp_drawing_styles = mp.solutions.drawing_styles
+    mp_pose          = mp.solutions.pose
 
     cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH,  640)

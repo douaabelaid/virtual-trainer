@@ -9,16 +9,39 @@ from shared.exercise_state_schema import (
 )
 import time
 
+# Minimum seconds between consecutive emissions of the same feedback code.
+# Prevents per-frame spam during real user testing.
+FEEDBACK_COOLDOWN_SECONDS = 3.0
+
+# --- Exercise Configuration ---
+# All thresholds in one place for easy tuning during testing
+
+SQUAT_CONFIG = {
+    "down_threshold": 95,              # Knee angle to detect DOWN stage
+    "standing_threshold": 160,         # Knee angle to detect STANDING stage
+    "knee_asymmetry_threshold": 15,    # Max degrees difference between left/right knees
+    "shallow_depth_threshold": 110,    # Min knee angle to warn "too shallow"
+    "back_angle_min": 150,             # Min back angle to warn "keep back straight"
+}
+
+PUSHUP_CONFIG = {
+    "down_threshold": 90,              # Elbow angle to detect DOWN stage
+    "standing_threshold": 160,         # Elbow angle to detect STANDING stage
+    "elbow_asymmetry_threshold": 15,   # Max degrees difference between left/right elbows
+    "shallow_depth_threshold": 110,    # Min elbow angle to warn "too shallow"
+}
+
 # --- Angle Thresholds ---
+# Legacy format for compatibility with existing code
 
 THRESHOLDS = {
     "squat": {
-        "down":     {"left_knee": 95,  "right_knee": 95},
-        "standing": {"left_knee": 160, "right_knee": 160},
+        "down":     {"left_knee": SQUAT_CONFIG["down_threshold"],  "right_knee": SQUAT_CONFIG["down_threshold"]},
+        "standing": {"left_knee": SQUAT_CONFIG["standing_threshold"], "right_knee": SQUAT_CONFIG["standing_threshold"]},
     },
     "pushup": {
-        "down":     {"left_elbow": 90,  "right_elbow": 90},
-        "standing": {"left_elbow": 160, "right_elbow": 160},
+        "down":     {"left_elbow": PUSHUP_CONFIG["down_threshold"],  "right_elbow": PUSHUP_CONFIG["down_threshold"]},
+        "standing": {"left_elbow": PUSHUP_CONFIG["standing_threshold"], "right_elbow": PUSHUP_CONFIG["standing_threshold"]},
     },
     "lunge": {
         "down":     {"left_knee": 90,  "right_knee": 90},
@@ -33,42 +56,59 @@ class ExerciseDetector:
         self.stage = ExerciseStage.STANDING
         self.rep_count = 0
         self._was_down = False   # tracks that we reached DOWN in the current rep
+        self._last_feedback_time: dict[str, float] = {}  # code -> last emission timestamp
 
     def reset(self):
         """Reset rep count and stage (e.g., when switching exercises or starting a new set)."""
         self.stage = ExerciseStage.STANDING
         self.rep_count = 0
         self._was_down = False
+        self._last_feedback_time.clear()
 
     def detect_stage(self, angles: dict) -> ExerciseStage:
         thresholds = THRESHOLDS[self.exercise.value]
 
         if self.exercise in (ExerciseType.SQUAT, ExerciseType.LUNGE):
-            left_knee = angles.get("left_knee", 180)
-            right_knee = angles.get("right_knee", 180)
+            left_knee = angles.get("left_knee")
+            right_knee = angles.get("right_knee")
+
+            # Collect visible knees
+            visible_knees = []
+            if left_knee is not None: visible_knees.append(left_knee)
+            if right_knee is not None: visible_knees.append(right_knee)
+
+            if not visible_knees:
+                return ExerciseStage.STANDING # Cannot detect
 
             if self.exercise == ExerciseType.SQUAT:
-                # Both legs bend equally — use the average
-                avg_knee = (left_knee + right_knee) / 2
+                # Use minimum to support side-profile where one leg is occluded
+                effective_knee = min(visible_knees)
             else:
-                # Lunge — only the front (most bent) leg matters
-                avg_knee = min(left_knee, right_knee)
+                effective_knee = min(visible_knees)
 
-            if avg_knee < thresholds["down"]["left_knee"]:
+            if effective_knee < thresholds["down"]["left_knee"]:
                 return ExerciseStage.DOWN
-            elif avg_knee > thresholds["standing"]["left_knee"]:
+            elif effective_knee > thresholds["standing"]["left_knee"]:
                 return ExerciseStage.STANDING
             else:
                 return ExerciseStage.TRANSITION
 
         elif self.exercise == ExerciseType.PUSHUP:
-            left_elbow = angles.get("left_elbow", 180)
-            right_elbow = angles.get("right_elbow", 180)
-            avg_elbow = (left_elbow + right_elbow) / 2
+            left_elbow = angles.get("left_elbow")
+            right_elbow = angles.get("right_elbow")
+            
+            visible_elbows = []
+            if left_elbow is not None: visible_elbows.append(left_elbow)
+            if right_elbow is not None: visible_elbows.append(right_elbow)
 
-            if avg_elbow < thresholds["down"]["left_elbow"]:
+            if not visible_elbows:
+                 return ExerciseStage.STANDING
+
+            effective_elbow = min(visible_elbows)
+
+            if effective_elbow < thresholds["down"]["left_elbow"]:
                 return ExerciseStage.DOWN
-            elif avg_elbow > thresholds["standing"]["left_elbow"]:
+            elif effective_elbow > thresholds["standing"]["left_elbow"]:
                 return ExerciseStage.STANDING
             else:
                 return ExerciseStage.TRANSITION
@@ -114,8 +154,8 @@ class ExerciseDetector:
             right_knee = angles.get("right_knee")
 
             # Knee alignment: warn if left and right diverge significantly
-            if left_knee and right_knee:
-                if abs(left_knee - right_knee) > 15:
+            if left_knee is not None and right_knee is not None:
+                if abs(left_knee - right_knee) > SQUAT_CONFIG["knee_asymmetry_threshold"]:
                     flags.append(FeedbackFlag(
                         code="KNEE_CAVE",
                         message="Left knee caving inward",
@@ -125,7 +165,7 @@ class ExerciseDetector:
             # Depth check only when at the bottom of the movement
             if self.stage == ExerciseStage.DOWN:
                 avg_knee = ((left_knee or 180) + (right_knee or 180)) / 2
-                if avg_knee > 110:
+                if avg_knee > SQUAT_CONFIG["shallow_depth_threshold"]:
                     flags.append(FeedbackFlag(
                         code="TOO_SHALLOW",
                         message="Squat not deep enough",
@@ -141,7 +181,7 @@ class ExerciseDetector:
             # Back check only during active movement (not neutral standing)
             if self.stage in (ExerciseStage.DOWN, ExerciseStage.TRANSITION):
                 back = angles.get("back")
-                if back is not None and back < 150:
+                if back is not None and back < SQUAT_CONFIG["back_angle_min"]:
                     flags.append(FeedbackFlag(
                         code="BACK_ANGLE",
                         message="Keep your back straight",
@@ -153,8 +193,8 @@ class ExerciseDetector:
             right_elbow = angles.get("right_elbow")
 
             # Elbow symmetry check
-            if left_elbow and right_elbow:
-                if abs(left_elbow - right_elbow) > 15:
+            if left_elbow is not None and right_elbow is not None:
+                if abs(left_elbow - right_elbow) > PUSHUP_CONFIG["elbow_asymmetry_threshold"]:
                     flags.append(FeedbackFlag(
                         code="ELBOW_FLARE",
                         message="Keep elbows even",
@@ -164,7 +204,7 @@ class ExerciseDetector:
             # Depth check only at the bottom of the push-up
             if self.stage == ExerciseStage.DOWN:
                 avg_elbow = ((left_elbow or 180) + (right_elbow or 180)) / 2
-                if avg_elbow > 110:
+                if avg_elbow > PUSHUP_CONFIG["shallow_depth_threshold"]:
                     flags.append(FeedbackFlag(
                         code="PUSHUP_TOO_SHALLOW",
                         message="Go lower — chest closer to the ground",
@@ -207,6 +247,12 @@ class ExerciseDetector:
                 severity=FeedbackSeverity.INFO
             ))
 
-        return flags
-
-
+        # Throttle: drop any flag whose code was emitted within the cooldown window.
+        now = time.monotonic()
+        throttled = []
+        for flag in flags:
+            last = self._last_feedback_time.get(flag.code, 0.0)
+            if now - last >= FEEDBACK_COOLDOWN_SECONDS:
+                self._last_feedback_time[flag.code] = now
+                throttled.append(flag)
+        return throttled

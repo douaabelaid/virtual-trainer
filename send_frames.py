@@ -14,10 +14,16 @@ import argparse
 import base64
 import json
 import logging
+import sys
+import os
 import time
 
 import cv2
 import websockets
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from logic.exercise_detector import ExerciseDetector
+from logic.feedback_mapper import map_flags_to_coaching
 
 logging.basicConfig(
     level=logging.INFO,
@@ -27,7 +33,7 @@ logger = logging.getLogger("send_frames")
 
 
 async def stream(uri: str, exercise: str, fps: int, show: bool) -> None:
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
     if not cap.isOpened():
         logger.error("Cannot open camera (index 0). Check your webcam connection.")
         return
@@ -38,6 +44,7 @@ async def stream(uri: str, exercise: str, fps: int, show: bool) -> None:
 
     frame_interval = 1.0 / fps
     frame_idx = 0
+    detector = ExerciseDetector(exercise=exercise)
 
     logger.info(f"Connecting to {uri} …")
     try:
@@ -57,17 +64,19 @@ async def stream(uri: str, exercise: str, fps: int, show: bool) -> None:
                         data = json.loads(raw)
                     except json.JSONDecodeError:
                         continue
-                    if data.get("type") != "pose":
-                        continue
                     nonlocal last_overlay
                     last_overlay = data
-                    detected = data.get("detected", False)
                     fps_val  = data.get("fps", 0)
                     lat      = data.get("latency_ms", 0)
-                    angles   = data.get("angles", {})
-                    angle_str = "  ".join(f"{k}: {v:.1f}°" for k, v in angles.items())
-                    status = "✅ pose" if detected else "❌ no pose"
-                    print(f"[{status}]  {fps_val:.1f} FPS  {lat:.1f} ms  {angle_str}")
+                    stage    = data.get("stage", "—")
+                    reps     = data.get("rep_count", 0)
+                    feedback = data.get("feedback", [])
+                    fb_txt   = feedback[0]["message"] if feedback else "—"
+                    print(
+                        f"\r[✅ pose]  {fps_val:.1f} FPS  {lat:.1f} ms  "
+                        f"stage={stage.upper():<12}  reps={reps}  {fb_txt:<35}",
+                        end="", flush=True
+                    )
 
             asyncio.ensure_future(receive_loop())
 
@@ -170,6 +179,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     scheme = "wss" if args.ssl else "ws"
-    URI = f"{scheme}://{args.host}:{args.port}"
+    URI = f"{scheme}://{args.host}:{args.port}/ws"
 
     asyncio.run(stream(URI, args.exercise, args.fps, args.show))

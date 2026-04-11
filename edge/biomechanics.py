@@ -2,6 +2,10 @@
 BIOMECHANICS.PY
 Analyses squat / pushup / plank from MediaPipe Pose 33-landmark output.
 Consumed by ws_server.py — no camera dependency.
+
+NOTE: This module uses the legacy MediaPipe solutions API (mp.solutions.pose).
+It is NOT part of the main ws_server pipeline (which uses the Tasks API via
+pose_detector.py). Keep this file separate from that pipeline.
 """
 import logging
 import mediapipe as mp
@@ -41,6 +45,18 @@ LEFT_KNEE      = _PL.LEFT_KNEE.value;      RIGHT_KNEE      = _PL.RIGHT_KNEE.valu
 LEFT_ANKLE     = _PL.LEFT_ANKLE.value;     RIGHT_ANKLE     = _PL.RIGHT_ANKLE.value
 
 
+# ── Squat Configuration ───────────────────────────────────────────────────────
+SQUAT_CONFIG = {
+    "min_knee_angle": 85,          # Minimum knee angle (degrees) for deep squat
+    "max_knee_angle": 160,         # Maximum knee angle (degrees) for standing
+    "asymmetry_threshold": 15.0,   # Max difference (degrees) between left/right knee
+    "knees_inward_ratio": 0.8,     # Knee width / ankle width ratio for knee cave detection
+    "depth_tolerance": 20,          # Tolerance (degrees) for depth insufficient warning
+    "phase_buffer_top": 10,         # Buffer (degrees) below max_knee for TOP phase detection
+    "phase_buffer_bottom": 10,      # Buffer (degrees) above min_knee for BOTTOM phase detection
+}
+
+
 class BiomechanicsAnalyzer:
     """
     Stateful analyser for one mobile client session.
@@ -48,10 +64,8 @@ class BiomechanicsAnalyzer:
     """
 
     VISIBILITY_THRESHOLD       = 0.3
-    ASYMMETRY_THRESHOLD_SQUAT  = 15.0
     ASYMMETRY_THRESHOLD_PUSHUP = 20.0
     BACK_BENT_THRESHOLD        = 160.0
-    KNEES_INWARD_RATIO         = 0.8
 
     def __init__(self, config: dict) -> None:
         self.config           = config
@@ -169,11 +183,11 @@ class BiomechanicsAnalyzer:
         }
 
     def _squat_phase(self, knee_angle: float) -> MovementPhase:
-        min_k = self._cfg('squat', 'min_knee_angle', 85)
-        max_k = self._cfg('squat', 'max_knee_angle', 160)
-        if   knee_angle > max_k - 10:
+        min_k = self._cfg('squat', 'min_knee_angle', SQUAT_CONFIG["min_knee_angle"])
+        max_k = self._cfg('squat', 'max_knee_angle', SQUAT_CONFIG["max_knee_angle"])
+        if   knee_angle > max_k - SQUAT_CONFIG["phase_buffer_top"]:
             return MovementPhase.TOP
-        elif knee_angle < min_k + 10:
+        elif knee_angle < min_k + SQUAT_CONFIG["phase_buffer_bottom"]:
             return MovementPhase.BOTTOM
         elif self.current_phase in (MovementPhase.TOP, MovementPhase.IDLE):
             return MovementPhase.DESCENDING
@@ -188,11 +202,11 @@ class BiomechanicsAnalyzer:
         landmarks: List[Dict],
     ) -> List[str]:
         errors = []
-        min_k = self._cfg('squat', 'min_knee_angle', 85)
+        min_k = self._cfg('squat', 'min_knee_angle', SQUAT_CONFIG["min_knee_angle"])
 
-        if self.current_phase == MovementPhase.BOTTOM and avg_knee > min_k + 20:
+        if self.current_phase == MovementPhase.BOTTOM and avg_knee > min_k + SQUAT_CONFIG["depth_tolerance"]:
             errors.append("depth_insufficient")
-        if abs(lk - rk) > self.ASYMMETRY_THRESHOLD_SQUAT:
+        if abs(lk - rk) > SQUAT_CONFIG["asymmetry_threshold"]:
             errors.append("asymmetry")
         if self._is_visible(landmarks,
                             LEFT_KNEE, RIGHT_KNEE, LEFT_ANKLE, RIGHT_ANKLE):
@@ -202,7 +216,7 @@ class BiomechanicsAnalyzer:
             rap = self.get_landmark_coords(landmarks, RIGHT_ANKLE)
             kd  = abs(lkp[0] - rkp[0])
             ad  = abs(lap[0] - rap[0])
-            if ad > 0 and kd < ad * self.KNEES_INWARD_RATIO:
+            if ad > 0 and kd < ad * SQUAT_CONFIG["knees_inward_ratio"]:
                 errors.append("knees_inward")
         return errors
 
