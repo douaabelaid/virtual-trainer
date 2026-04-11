@@ -222,6 +222,9 @@ def startup():
         target_fps=TARGET_FPS,
         min_visibility=0.2            # Lower = accept more landmarks (default 0.3)
     )
+    logger.info('Pre-loading MediaPipe model...')
+    cold_ms = pose_detector.warmup()
+    logger.info(f'Model warm - cold-start: {cold_ms:.1f} ms')
     logger.info('Initialising ExerciseDetector ...')
     exercise_detector = ExerciseDetector(exercise='squat')
     logger.info('Opening camera ...')

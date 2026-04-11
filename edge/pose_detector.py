@@ -100,17 +100,17 @@ class PoseDetector:
         self._last_t          = 0.0
 
         _model_path = os.path.join(os.path.dirname(__file__), "..", "pose_landmarker.task")
-        _base_opts  = mp_tasks.BaseOptions(model_asset_path=_model_path)
-        _options    = mp_vision.PoseLandmarkerOptions(
+        _base_opts  = _mp_tasks.BaseOptions(model_asset_path=_model_path)
+        _options    = _mp_vision.PoseLandmarkerOptions(
             base_options=_base_opts,
-            running_mode=mp_vision.RunningMode.IMAGE,
+            running_mode=_mp_vision.RunningMode.IMAGE,
             num_poses=1,
             min_pose_detection_confidence=min_detection_conf,
             min_pose_presence_confidence=min_detection_conf,
             min_tracking_confidence=min_tracking_conf,
             output_segmentation_masks=False,
         )
-        self._pose = mp_vision.PoseLandmarker.create_from_options(_options)
+        self._pose = _mp_vision.PoseLandmarker.create_from_options(_options)
         logger.info(
             f"✅ PoseDetector ready  "
             f"(complexity={model_complexity}, target={target_fps} FPS)"
