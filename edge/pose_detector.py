@@ -111,6 +111,68 @@ class PoseDetector:
 
     # ── Main API ──────────────────────────────────────────────────────────────
 
+    def detect_bgr(self, frame: np.ndarray) -> "PoseResult":
+        """
+        Process a raw BGR frame directly (no JPEG encode/decode round-trip).
+        Use this when the frame comes from a local webcam — saves ~5-10 ms
+        per frame compared to detect(jpeg_bytes).
+        """
+        t0 = time.perf_counter()
+
+        if self._frame_idx > 0 and (t0 - self._last_t) < self._frame_interval:
+            return PoseResult(
+                detected=False, landmarks=[], angles={},
+                fps=round(self._fps_ema, 1), latency_ms=0.0,
+                frame_idx=self._frame_idx, error="throttled",
+            )
+
+        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        rgb.flags.writeable = False
+        try:
+            results = self._pose.process(rgb)  # type: ignore[union-attr]
+        except Exception as exc:
+            logger.error(f"MediaPipe error: {exc}", exc_info=True)
+            return PoseResult(
+                detected=False, landmarks=[], angles={},
+                fps=round(self._fps_ema, 1), latency_ms=0.0,
+                frame_idx=self._frame_idx, error=f"mediapipe_error: {exc}",
+            )
+
+        t1              = time.perf_counter()
+        elapsed         = t1 - self._last_t if self._last_t else 1.0 / self._target_fps
+        self._fps_ema   = 0.8 * self._fps_ema + 0.2 * (1.0 / elapsed)
+        self._last_t    = t1
+        self._frame_idx += 1
+        latency_ms      = (t1 - t0) * 1000
+
+        if not results.pose_landmarks:
+            return PoseResult(
+                detected=False, landmarks=[], angles={},
+                fps=round(self._fps_ema, 1),
+                latency_ms=round(latency_ms, 2),
+                frame_idx=self._frame_idx,
+            )
+
+        h, w    = frame.shape[:2]
+        lm_list = []
+        lm_map: dict[str, dict] = {}
+        for i, lm in enumerate(results.pose_landmarks.landmark):
+            name    = LANDMARK_NAMES[i] if i < len(LANDMARK_NAMES) else f"lm_{i}"
+            visible = lm.visibility >= self._min_visibility
+            entry   = {
+                "name": name, "x": round(lm.x, 4), "y": round(lm.y, 4),
+                "z": round(lm.z, 4), "visibility": round(lm.visibility, 3),
+                "px": int(lm.x * w), "py": int(lm.y * h), "visible": visible,
+            }
+            lm_list.append(entry)
+            lm_map[name] = entry
+
+        return PoseResult(
+            detected=True, landmarks=lm_list, angles=_compute_angles(lm_map),
+            fps=round(self._fps_ema, 1), latency_ms=round(latency_ms, 2),
+            frame_idx=self._frame_idx,
+        )
+
     def detect(self, jpeg_bytes: bytes) -> PoseResult:
         """
         Process one JPEG frame received from the mobile app.
